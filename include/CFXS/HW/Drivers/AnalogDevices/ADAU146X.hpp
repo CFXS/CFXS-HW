@@ -11,7 +11,10 @@ namespace CFXS::HW {
 
         void Initialize();
 
-        void WriteReset(bool state) { m_pin_nReset.Write(state); }
+    private:
+        void Initialize_SPI();        // Initialize SPI peripheral
+        void SetSlavePortModeToSPI(); // Place DSP slave port into SPI mode (default is I2C)
+        void TestCommunication();
 
     private:
         GPIO m_pin_nReset;
@@ -19,6 +22,8 @@ namespace CFXS::HW {
         GPIO m_pin_SCLK;
         GPIO m_pin_MOSI;
         GPIO m_pin_MISO;
+
+        bool m_Initialized = false;
     };
 
 } // namespace CFXS::HW
