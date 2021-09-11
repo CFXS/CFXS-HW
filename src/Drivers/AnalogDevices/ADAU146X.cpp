@@ -1,6 +1,7 @@
 #include <CFXS/HW/Drivers/AnalogDevices/ADAU146X.hpp>
 #include <CFXS/Base/CPU.hpp>
 #include <CFXS/Base/Debug.hpp>
+#include <CFXS/HW/Drivers/AnalogDevices/_Reg_ADAU146X.hpp>
 #include <_LoggerConfig.hpp>
 
 #include <CFXS/HW/System/SystemControl_TM4C.hpp>
@@ -13,7 +14,7 @@ using CFXS::HW::TM4C::SystemControl;
 namespace CFXS::HW {
 
     static constexpr auto SPI_BITRATE_INITIAL = 1000000; // 1MHz
-    static constexpr auto SPI_BITRATE_NORMAL  = 8000000; // 8MHz
+    static constexpr auto SPI_BITRATE_NORMAL  = 4000000; // 8MHz
 
     ADAU146X::ADAU146X(const void* nreset, const void* cs, const void* sclk, const void* mosi, const void* miso) :
         m_pin_nReset(nreset), m_pin_CS(cs), m_pin_SCLK(sclk), m_pin_MOSI(mosi), m_pin_MISO(miso) {
@@ -24,8 +25,8 @@ namespace CFXS::HW {
         CFXS_ASSERT(m_Initialized == false, "Already initialized");
         HardwareLogger_Base::Log("ADAU146X[%p] Initialize", this);
 
-        m_pin_nReset.Initialize(GPIO::Direction::OUTPUT, 1); // Run
-        m_pin_CS.Initialize(GPIO::Direction::HARDWARE);
+        m_pin_nReset.Initialize(GPIO::Direction::OUTPUT, 0xFFFFFFFF); // Run
+        m_pin_CS.Initialize(GPIO::Direction::OUTPUT, 0xFFFFFFFF);
         m_pin_SCLK.Initialize(GPIO::Direction::HARDWARE);
         m_pin_MOSI.Initialize(GPIO::Direction::HARDWARE);
         m_pin_MISO.Initialize(GPIO::Direction::HARDWARE);
@@ -41,9 +42,7 @@ namespace CFXS::HW {
         HardwareLogger_Base::Log(" - Initialize SPI");
 
         SystemControl::EnablePeripheral(SYSCTL_PERIPH_SSI1);
-        SSIConfigSetExpClk(SSI1_BASE, CPU::CLOCK_FREQUENCY, SSI_FRF_MOTO_MODE_3, SSI_MODE_MASTER, SPI_BITRATE_INITIAL, 8);
-        SSIAdvModeSet(SSI1_BASE, SSI_ADV_MODE_LEGACY);
-        SSIAdvFrameHoldEnable(SSI1_BASE);
+        SSIConfigSetExpClk(SSI1_BASE, CPU::CLOCK_FREQUENCY, SSI_FRF_MOTO_MODE_3, SSI_MODE_MASTER, SPI_BITRATE_NORMAL, 8);
         SSIEnable(SSI1_BASE);
     }
 
@@ -53,12 +52,11 @@ namespace CFXS::HW {
         HardwareLogger_Base::Log(" - Set slave port to SPI mode");
         CPU::Delay_ms(1);
 
+        // Slave port is set to SPI mode after 3 HIGH->LOW transitions on CS
         for (int i = 0; i < 3; i++) {
-            SSIDataPut(SSI1_BASE, 0);
-            SSIDataPut(SSI1_BASE, 0);
-            SSIAdvDataPutFrameEnd(SSI1_BASE, 0);
-
-            HardwareLogger_Base::Log(" - Wrote dummy byte %d", i + 1);
+            m_pin_CS.Write(false);
+            CPU::Delay_ms(1);
+            m_pin_CS.Write(true);
             CPU::Delay_ms(1);
         }
     }
@@ -72,17 +70,21 @@ namespace CFXS::HW {
     void ADAU146X::TestCommunication() {
         uint32_t temp;
 
+        uint16_t addr = 0xF890;
+
         while (SSIDataGetNonBlocking(SSI1_BASE, &temp)) {}
 
-        SSIDataPut(SSI1_BASE, 0x80);
-        SSIDataPut(SSI1_BASE, 0xF4);
-        SSIDataPut(SSI1_BASE, 0x05);
+        m_pin_CS.Write(false);
+        SSIDataPut(SSI1_BASE, 0x01);
+        SSIDataPut(SSI1_BASE, addr >> 8);   // soft reset register
+        SSIDataPut(SSI1_BASE, addr & 0xFF); // after reset should be 0x0001
         SSIDataPut(SSI1_BASE, 0x00);
-        SSIAdvDataPutFrameEnd(SSI1_BASE, 0x00);
+        SSIDataPut(SSI1_BASE, 0x00);
+        while (SSIBusy(SSI1_BASE)) {}
+        m_pin_CS.Write(true);
 
         uint32_t dat[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-        while (!(HWREG(SSI1_BASE + SSI_O_SR) & SSI_SR_TFE)) {}
-        int i = 0;
+        int i           = 0;
         while (SSIDataGetNonBlocking(SSI1_BASE, &dat[i++])) {}
         HardwareLogger_Base::Log(" - read %d bytes", i);
 
