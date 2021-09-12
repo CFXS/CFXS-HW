@@ -1,27 +1,33 @@
 #pragma once
 
 #include <CFXS/HW/Peripherals/GPIO.hpp>
+#include <CFXS/HW/Peripherals/SPI.hpp>
 
 namespace CFXS::HW {
 
     class ADAU146X {
     public:
         /// Create ADAU146X object with Desc_GPIO descriptors
-        ADAU146X(const void* nreset, const void* cs, const void* sclk, const void* mosi, const void* miso);
+        /// \param spi SPI peripheral
+        /// \param gpiodesc_nReset GPIO descriptor for NRESET pin - nullptr if reset pin not used
+        ADAU146X(SPI* spi, const void* gpiodesc_nReset = nullptr);
 
         void Initialize();
+
+        void ExecuteSafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
+        void ReadWord(uint8_t* readTo, uint32_t address, size_t count);
 
     private:
         void Initialize_SPI();        // Initialize SPI peripheral
         void SetSlavePortModeToSPI(); // Place DSP slave port into SPI mode (default is I2C)
-        void TestCommunication();
+        void TestProgram();
+
+        void SIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data);
+        void SIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data);
 
     private:
+        SPI* m_SPI;
         GPIO m_pin_nReset;
-        GPIO m_pin_CS;
-        GPIO m_pin_SCLK;
-        GPIO m_pin_MOSI;
-        GPIO m_pin_MISO;
 
         bool m_Initialized = false;
     };

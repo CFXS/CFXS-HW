@@ -2,7 +2,25 @@
 
 namespace CFXS::HW {
 
+#pragma pack(1)
+    struct CommandHeader_ADAU146X {
+        bool read : 1;
+        uint8_t chipAddress : 7;
+        uint16_t subAddress;
+        uint8_t data[];
+    };
+#pragma pack()
+
     enum class Regs_ADAU146X : uint16_t {
+        DATA_SAFELOAD0     = 0x6000, // Safeload Data Slot 0
+        DATA_SAFELOAD1     = 0x6001, // Safeload Data Slot 1
+        DATA_SAFELOAD2     = 0x6002, // Safeload Data Slot 2
+        DATA_SAFELOAD3     = 0x6003, // Safeload Data Slot 3
+        DATA_SAFELOAD4     = 0x6004, // Safeload Data Slot 4
+        ADDRESS_SAFELOAD   = 0x6005, // Target address for safeload transfer
+        NUM_SAFELOAD_LOWER = 0x6006,
+        NUM_SAFELOAD_UPPER = 0x6007,
+
         PLL_CTRL0              = 0xF000, // PLL Feedback Divider
         PLL_CTRL1              = 0xF001, // PLL Prescale Divider
         PLL_CLK_SRC            = 0xF002, // PLL Clock Source
@@ -139,4 +157,4 @@ namespace CFXS::HW {
         SOFT_RESET             = 0xF890, // Soft Reset
     };
 
-}
+} // namespace CFXS::HW

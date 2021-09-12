@@ -12,7 +12,7 @@ namespace CFXS::HW {
     using TM4C::Desc_GPIO;
     using TM4C::SystemControl;
 
-    void GPIO::Initialize(Direction dir, size_t initialState) {
+    void GPIO::Initialize(PinType dir, size_t initialState) {
         CFXS_ASSERT(GET_DESCRIPTOR(), "Descriptor not set");
         CFXS_ASSERT(GET_DESCRIPTOR()->periph, "Invalid peripheral");
         CFXS_ASSERT(GET_DESCRIPTOR()->base, "Invalid base");
@@ -32,13 +32,13 @@ namespace CFXS::HW {
                 break;
         }
 
-        m_Direction = dir;
-        if (dir == Direction::INPUT) {
+        m_PinType = dir;
+        if (dir == PinType::INPUT || dir == PinType::ANALOG) {
             GPIODirModeSet(GET_DESCRIPTOR()->base, GET_DESCRIPTOR()->pins, GPIO_DIR_MODE_IN);
-        } else if (dir == Direction::OUTPUT) {
+        } else if (dir == PinType::OUTPUT) {
             GPIODirModeSet(GET_DESCRIPTOR()->base, GET_DESCRIPTOR()->pins, GPIO_DIR_MODE_OUT);
             Write(initialState);
-        } else if (dir == Direction::HARDWARE) {
+        } else if (dir == PinType::HARDWARE) {
             MakeHardwareControlled();
         }
     }
@@ -46,15 +46,15 @@ namespace CFXS::HW {
     /// Reconfigure specific GPIO settings from descriptor
     void GPIO::Reconfigure(ConfigParameter param, void* data) { CFXS_ASSERT(0, "Not implemented"); }
 
-    /// Set GPIO direction
-    void GPIO::SetDirection(Direction dir) {
-        m_Direction = dir;
+    /// Set GPIO type
+    void GPIO::SetPinType(PinType dir) {
+        m_PinType = dir;
 
-        if (dir == Direction::INPUT) {
+        if (dir == PinType::INPUT || dir == PinType::ANALOG) {
             GPIODirModeSet(GET_DESCRIPTOR()->base, GET_DESCRIPTOR()->pins, GPIO_DIR_MODE_IN);
-        } else if (dir == Direction::OUTPUT) {
+        } else if (dir == PinType::OUTPUT) {
             GPIODirModeSet(GET_DESCRIPTOR()->base, GET_DESCRIPTOR()->pins, GPIO_DIR_MODE_OUT);
-        } else if (dir == Direction::HARDWARE) {
+        } else if (dir == PinType::HARDWARE) {
             MakeHardwareControlled();
         }
     }
@@ -68,7 +68,7 @@ namespace CFXS::HW {
     /// Map to GPIO
     /// User controlled
     void GPIO::MakeUserControlled() {
-        SetDirection(m_Direction); //
+        SetPinType(m_PinType); //
     }
 
     /// Read data from GPIO
@@ -87,4 +87,6 @@ namespace CFXS::HW {
     }
 
 } // namespace CFXS::HW
+
+    #undef GET_DESCRIPTOR
 #endif

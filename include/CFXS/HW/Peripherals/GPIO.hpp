@@ -8,26 +8,20 @@ namespace CFXS::HW {
             INTERRUPT, // interrupts enabled/disabled, handler, priority, edge
         };
 
-        enum class Direction { INPUT, OUTPUT, HIGH_Z, HARDWARE };
+        enum class PinType { INPUT, OUTPUT, HIGH_Z, HARDWARE, ANALOG };
 
     public:
         template<typename T>
         constexpr GPIO(T* descriptor = nullptr) : m_Descriptor((const void*)descriptor) {}
 
         /// Initialize GPIO
-        void Initialize(Direction dir = Direction::INPUT, size_t initialState = 0);
-
-        /// Set descriptor
-        template<typename T>
-        void SetDescriptor(T* descriptor = nullptr) {
-            m_Descriptor = (void*)descriptor;
-        }
+        void Initialize(PinType dir = PinType::INPUT, size_t initialState = 0);
 
         /// Reconfigure specific GPIO settings
         void Reconfigure(ConfigParameter param, void* data);
 
-        /// Set GPIO direction
-        void SetDirection(Direction dir);
+        /// Set GPIO type
+        void SetPinType(PinType dir);
 
         /// Map to peripheral
         /// Hardware controlled
@@ -47,6 +41,13 @@ namespace CFXS::HW {
         /// Toggle data on GPIO (bit invert)
         void Toggle() { Write(~Read()); }
 
+        /// Set descriptor
+        template<typename T>
+        void SetDescriptor(T* descriptor = nullptr) {
+            m_Descriptor = (void*)descriptor;
+        }
+
+        /// Get descriptor as type T*
         template<typename T>
         const T* GetDescriptor() const {
             return static_cast<const T*>(m_Descriptor);
@@ -54,7 +55,7 @@ namespace CFXS::HW {
 
     private:
         const void* m_Descriptor = nullptr;
-        Direction m_Direction;
+        PinType m_PinType;
     };
 
 } // namespace CFXS::HW
