@@ -14,7 +14,7 @@ namespace CFXS::HW {
 
         void Initialize();
 
-        void ExecuteSafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
+        void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
         void ReadWord(uint8_t* readTo, uint32_t address, size_t count);
 
     private:
