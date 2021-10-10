@@ -22,8 +22,8 @@ namespace CFXS::HW {
         void SetSlavePortModeToSPI(); // Place DSP slave port into SPI mode (default is I2C)
         void TestProgram();
 
-        void SIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data);
-        void SIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data);
+        void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data);
+        void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data);
 
     private:
         SPI* m_SPI;
