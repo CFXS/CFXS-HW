@@ -8,7 +8,7 @@
     #include <inc/hw_types.h>
     #include <CFXS/Base/Debug.hpp>
 
-    #define GET_DESCRIPTOR() GetDescriptor<Desc_SPI>()
+    #define _descriptor GetDescriptor<Desc_SPI>()
 
 namespace CFXS::HW {
 
@@ -23,7 +23,7 @@ namespace CFXS::HW {
         mosi.Initialize(GPIO::PinType::HARDWARE);
         m_pin_CS.Initialize(GPIO::PinType::OUTPUT, 0xFFFFFFFF);
 
-        SystemControl::EnablePeripheral(GET_DESCRIPTOR()->periph);
+        SystemControl::EnablePeripheral(_descriptor->periph);
         Disable();
     }
 
@@ -42,70 +42,70 @@ namespace CFXS::HW {
             default: CFXS_ASSERT(0, "Invalid mode"); return;
         }
 
-        SSIConfigSetExpClk(GET_DESCRIPTOR()->base, CPU::CLOCK_FREQUENCY, ssiProtocol, SSI_MODE_MASTER, bitrate, dataWidth);
+        SSIConfigSetExpClk(_descriptor->base, CPU::CLOCK_FREQUENCY, ssiProtocol, SSI_MODE_MASTER, bitrate, dataWidth);
     }
 
     /// Enable SPI peripheral
     void SPI::Enable() {
-        SSIEnable(GET_DESCRIPTOR()->base); //
+        SSIEnable(_descriptor->base); //
     }
 
     /// Disable SPI peripheral
     void SPI::Disable() {
-        SSIDisable(GET_DESCRIPTOR()->base); //
+        SSIDisable(_descriptor->base); //
     }
 
     /// Write single data unit
     void SPI::Write(size_t data, bool waitUntilTransmitted) {
-        SSIDataPut(GET_DESCRIPTOR()->base, data);
+        SSIDataPut(_descriptor->base, data);
         if (waitUntilTransmitted)
-            while (SSIBusy(GET_DESCRIPTOR()->base)) {}
+            while (SSIBusy(_descriptor->base)) {}
     }
 
     /// Write multiple data units
     template<typename T>
     void SPI::Write(T* data, size_t count, bool waitUntilTransmitted) {
         while (count--) {
-            SSIDataPut(GET_DESCRIPTOR()->base, *data++);
+            SSIDataPut(_descriptor->base, *data++);
         }
         if (waitUntilTransmitted)
-            while (SSIBusy(GET_DESCRIPTOR()->base)) {}
+            while (SSIBusy(_descriptor->base)) {}
     }
 
     /// Read single data unit
     template<typename T>
     void SPI::Read(T* readTo) {
-        while (!(HWREG(GET_DESCRIPTOR()->base + SSI_O_SR) & SSI_SR_RNE)) {}
-        *readTo = HWREG(GET_DESCRIPTOR()->base + SSI_O_DR);
+        while (!(HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_RNE)) {}
+        *readTo = HWREG(_descriptor->base + SSI_O_DR);
     }
 
     /// Is SPI busy
-    bool SPI::IsBusy() { return SSIBusy(GET_DESCRIPTOR()->base); }
+    bool SPI::IsBusy() { return SSIBusy(_descriptor->base); }
 
     /// Clear RX FIFO
     void SPI::Clear_RX_FIFO() {
         uint32_t temp;
-        while (SSIDataGetNonBlocking(GET_DESCRIPTOR()->base, &temp)) {}
+        while (SSIDataGetNonBlocking(_descriptor->base, &temp)) {}
     }
 
     /// Is TX FIFO empty
     bool SPI::Is_TX_FIFO_Empty() {
-        return (HWREG(GET_DESCRIPTOR()->base + SSI_O_SR) & SSI_SR_TFE); //
+        return (HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_TFE); //
     }
 
     /// Is TX FIFO full
     bool SPI::Is_TX_FIFO_Full() {
-        return !(HWREG(GET_DESCRIPTOR()->base + SSI_O_SR) & SSI_SR_TNF); //
+        return !(HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_TNF); //
     }
 
     /// Is RX FIFO empty
     bool SPI::Is_RX_FIFO_Empty() {
-        return !(HWREG(GET_DESCRIPTOR()->base + SSI_O_SR) & SSI_SR_RNE); //
+        return !(HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_RNE); //
     }
 
     /// Is RX FIFO full
     bool SPI::Is_RX_FIFO_Full() {
-        return (HWREG(GET_DESCRIPTOR()->base + SSI_O_SR) & SSI_SR_RFF); //
+        return (HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_RFF); //
     }
 
     /// Get size of FIFO
@@ -120,5 +120,5 @@ namespace CFXS::HW {
 
 } // namespace CFXS::HW
 
-    #undef GET_DESCRIPTOR
+    #undef _descriptor
 #endif
