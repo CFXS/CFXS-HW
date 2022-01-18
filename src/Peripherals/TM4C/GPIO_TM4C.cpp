@@ -1,11 +1,12 @@
+// [CFXS] //
 #ifdef CFXS_PLATFORM_TM4C
-    #include <CFXS/HW/Peripherals/GPIO.hpp>
-    #include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_GPIO_TM4C.hpp>
-    #include <CFXS/HW/System/SystemControl_TM4C.hpp>
-    #include <CFXS/Base/Debug.hpp>
-    #include <driverlib/gpio.h>
+#include <CFXS/HW/Peripherals/GPIO.hpp>
+#include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_GPIO_TM4C.hpp>
+#include <CFXS/HW/System/SystemControl_TM4C.hpp>
+#include <CFXS/Base/Debug.hpp>
+#include <driverlib/gpio.h>
 
-    #define _descriptor GetDescriptor<Desc_GPIO>()
+#define _descriptor GetDescriptor<Desc_GPIO>()
 
 namespace CFXS::HW {
 
@@ -44,7 +45,9 @@ namespace CFXS::HW {
     }
 
     /// Reconfigure specific GPIO settings from descriptor
-    void GPIO::Reconfigure(ConfigParameter param, void* data) { CFXS_ASSERT(0, "Not implemented"); }
+    void GPIO::Reconfigure(ConfigParameter param, void* data) {
+        CFXS_ASSERT(0, "Not implemented");
+    }
 
     /// Set GPIO type
     void GPIO::SetPinType(PinType dir) {
@@ -88,5 +91,5 @@ namespace CFXS::HW {
 
 } // namespace CFXS::HW
 
-    #undef _descriptor
+#undef _descriptor
 #endif

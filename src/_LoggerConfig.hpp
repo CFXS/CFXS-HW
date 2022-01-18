@@ -1,3 +1,4 @@
+// [CFXS] //
 #pragma once
 
 #include <CFXS/Base/DebugTerminal.hpp>

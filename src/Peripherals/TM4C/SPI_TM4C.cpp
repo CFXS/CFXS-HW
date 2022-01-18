@@ -1,14 +1,15 @@
+// [CFXS] //
 #ifdef CFXS_PLATFORM_TM4C
-    #include <CFXS/HW/Peripherals/SPI.hpp>
-    #include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_SPI_TM4C.hpp>
-    #include <CFXS/HW/System/SystemControl_TM4C.hpp>
-    #include <CFXS/Base/CPU.hpp>
-    #include <driverlib/ssi.h>
-    #include <inc/hw_ssi.h>
-    #include <inc/hw_types.h>
-    #include <CFXS/Base/Debug.hpp>
+#include <CFXS/HW/Peripherals/SPI.hpp>
+#include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_SPI_TM4C.hpp>
+#include <CFXS/HW/System/SystemControl_TM4C.hpp>
+#include <CFXS/Base/CPU.hpp>
+#include <driverlib/ssi.h>
+#include <inc/hw_ssi.h>
+#include <inc/hw_types.h>
+#include <CFXS/Base/Debug.hpp>
 
-    #define _descriptor GetDescriptor<Desc_SPI>()
+#define _descriptor GetDescriptor<Desc_SPI>()
 
 namespace CFXS::HW {
 
@@ -59,7 +60,8 @@ namespace CFXS::HW {
     void SPI::Write(size_t data, bool waitUntilTransmitted) {
         SSIDataPut(_descriptor->base, data);
         if (waitUntilTransmitted)
-            while (SSIBusy(_descriptor->base)) {}
+            while (SSIBusy(_descriptor->base)) {
+            }
     }
 
     /// Write multiple data units
@@ -69,23 +71,28 @@ namespace CFXS::HW {
             SSIDataPut(_descriptor->base, *data++);
         }
         if (waitUntilTransmitted)
-            while (SSIBusy(_descriptor->base)) {}
+            while (SSIBusy(_descriptor->base)) {
+            }
     }
 
     /// Read single data unit
     template<typename T>
     void SPI::Read(T* readTo) {
-        while (!(HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_RNE)) {}
+        while (!(HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_RNE)) {
+        }
         *readTo = HWREG(_descriptor->base + SSI_O_DR);
     }
 
     /// Is SPI busy
-    bool SPI::IsBusy() { return SSIBusy(_descriptor->base); }
+    bool SPI::IsBusy() {
+        return SSIBusy(_descriptor->base);
+    }
 
     /// Clear RX FIFO
     void SPI::Clear_RX_FIFO() {
         uint32_t temp;
-        while (SSIDataGetNonBlocking(_descriptor->base, &temp)) {}
+        while (SSIDataGetNonBlocking(_descriptor->base, &temp)) {
+        }
     }
 
     /// Is TX FIFO empty
@@ -120,5 +127,5 @@ namespace CFXS::HW {
 
 } // namespace CFXS::HW
 
-    #undef _descriptor
+#undef _descriptor
 #endif

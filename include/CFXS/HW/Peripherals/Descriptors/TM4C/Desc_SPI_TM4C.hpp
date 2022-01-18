@@ -1,3 +1,4 @@
+// [CFXS] //
 #pragma once
 
 #include <array>
@@ -8,7 +9,8 @@
 namespace CFXS::HW::TM4C {
 
     struct Desc_SPI {
-        constexpr Desc_SPI(uint32_t spiPeriph, uint32_t spiBase) : periph(spiPeriph), base(spiBase) {}
+        constexpr Desc_SPI(uint32_t spiPeriph, uint32_t spiBase) : periph(spiPeriph), base(spiBase) {
+        }
         uint32_t periph;
         uint32_t base;
     };

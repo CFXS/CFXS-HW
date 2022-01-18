@@ -1,3 +1,4 @@
+// [CFXS] //
 #pragma once
 
 #include <array>
@@ -29,7 +30,8 @@ namespace CFXS::HW::TM4C {
             periph(gpioPeriph),
             driveCurrent(gpioDriveCurrent),
             pinType(gpioPinType),
-            pinConfig(gpioPinConfig) {}
+            pinConfig(gpioPinConfig) {
+        }
 
         /// \param pin "PA0" / "PA0,1,2,..."
         /// \param gpioDriveCurrent GPIO_STRENGTH_xMA

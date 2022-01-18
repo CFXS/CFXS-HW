@@ -1,3 +1,4 @@
+// [CFXS] //
 #pragma once
 #include <CFXS/HW/Peripherals/GPIO.hpp>
 
@@ -27,7 +28,8 @@ namespace CFXS::HW {
             m_pin_CS(gpiodesc_CS),
             m_gpiodesc_CLK(gpiodesc_CLK),
             m_gpiodesc_MOSI(gpiodesc_MOSI),
-            m_gpiodesc_MISO(gpiodesc_MISO) {}
+            m_gpiodesc_MISO(gpiodesc_MISO) {
+        }
 
         /// Initialize SPI
         void Initialize();

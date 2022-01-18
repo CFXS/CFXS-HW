@@ -1,3 +1,4 @@
+// [CFXS] //
 #pragma once
 
 #include <driverlib/sysctl.h>
@@ -11,7 +12,8 @@ namespace CFXS::HW::TM4C {
         }
 
         static void WaitForPeripheralReady(uint32_t periph) {
-            while (!IsPeripheralEnabled(periph)) {}
+            while (!IsPeripheralEnabled(periph)) {
+            }
         }
 
         static void EnablePeripheral(uint32_t periph, bool waitForReady = true) {

@@ -1,3 +1,4 @@
+// [CFXS] //
 #pragma once
 
 namespace CFXS::HW {
@@ -12,7 +13,8 @@ namespace CFXS::HW {
 
     public:
         template<typename T>
-        constexpr GPIO(T* descriptor = nullptr) : m_Descriptor((const void*)descriptor) {}
+        constexpr GPIO(T* descriptor = nullptr) : m_Descriptor((const void*)descriptor) {
+        }
 
         /// Initialize GPIO
         void Initialize(PinType dir = PinType::INPUT, size_t initialState = 0);
@@ -39,7 +41,9 @@ namespace CFXS::HW {
         void Write(bool state);
 
         /// Toggle data on GPIO (bit invert)
-        void Toggle() { Write(~Read()); }
+        void Toggle() {
+            Write(~Read());
+        }
 
         /// Set descriptor
         template<typename T>
