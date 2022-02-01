@@ -1,32 +1,32 @@
 // ---------------------------------------------------------------------
 // CFXS Framework Hardware Module <https://github.com/CFXS/CFXS-Hardware>
 // Copyright (C) 2022 | CFXS / Rihards Veips
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 // ---------------------------------------------------------------------
 // [CFXS] //
 #ifdef CFXS_PLATFORM_TM4C
-#include <CFXS/HW/Peripherals/SPI.hpp>
-#include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_SPI_TM4C.hpp>
-#include <CFXS/HW/System/SystemControl_TM4C.hpp>
-#include <CFXS/Base/CPU.hpp>
-#include <driverlib/ssi.h>
-#include <inc/hw_ssi.h>
-#include <inc/hw_types.h>
-#include <CFXS/Base/Debug.hpp>
+    #include <CFXS/HW/Peripherals/SPI.hpp>
+    #include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_SPI_TM4C.hpp>
+    #include <CFXS/HW/System/SystemControl_TM4C.hpp>
+    #include <CFXS/Platform/CPU.hpp>
+    #include <driverlib/ssi.h>
+    #include <inc/hw_ssi.h>
+    #include <inc/hw_types.h>
+    #include <CFXS/Base/Debug.hpp>
 
-#define _descriptor GetDescriptor<Desc_SPI>()
+    #define _descriptor GetDescriptor<Desc_SPI>()
 
 namespace CFXS::HW {
 
@@ -144,5 +144,5 @@ namespace CFXS::HW {
 
 } // namespace CFXS::HW
 
-#undef _descriptor
+    #undef _descriptor
 #endif

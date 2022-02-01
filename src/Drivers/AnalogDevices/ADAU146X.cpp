@@ -1,24 +1,24 @@
 // ---------------------------------------------------------------------
 // CFXS Framework Hardware Module <https://github.com/CFXS/CFXS-Hardware>
 // Copyright (C) 2022 | CFXS / Rihards Veips
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 // ---------------------------------------------------------------------
 // [CFXS] //
 #include <CFXS/HW/Drivers/AnalogDevices/ADAU146X.hpp>
 #include <CFXS/HW/Drivers/AnalogDevices/_Def_ADAU146X.hpp>
-#include <CFXS/Base/CPU.hpp>
+#include <CFXS/Platform/CPU.hpp>
 #include <CFXS/Base/Debug.hpp>
 #include <_LoggerConfig.hpp>
 
@@ -65,13 +65,13 @@ namespace CFXS::HW {
     // These writes are ignored by the slave port
     void ADAU146X::SetSlavePortModeToSPI() {
         HardwareLogger_Base::Log(" - Set slave port to SPI mode");
-        CPU::Delay_ms(1);
+        CPU::BlockingMilliseconds(1);
 
         for (int i = 0; i < 3; i++) {
             m_SPI->SetCS(false);
-            CPU::Delay_ms(1);
+            CPU::BlockingMilliseconds(1);
             m_SPI->SetCS(true);
-            CPU::Delay_ms(1);
+            CPU::BlockingMilliseconds(1);
         }
     }
 
@@ -118,7 +118,7 @@ namespace CFXS::HW {
         }
 
         m_SPI->SetCS(true);
-        CPU::Delay_us(32);
+        CPU::BlockingMicroseconds(32);
     }
 
 #include "IC.h"
@@ -135,7 +135,7 @@ namespace CFXS::HW {
         m_SPI->Write(subAddr & 0xFF);
         m_SPI->Write(data, dataLen, true);
         m_SPI->SetCS(true);
-        CPU::Delay_us(safeload ? 8 : 500);
+        CPU::BlockingMicroseconds(safeload ? 8 : 500);
     }
 
     void ADAU146X::xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data) {
@@ -143,7 +143,7 @@ namespace CFXS::HW {
         m_SPI->Write(chipAddr);
         m_SPI->Write(data, dataLen, true);
         m_SPI->SetCS(true);
-        CPU::Delay_us(safeload ? 8 : 500);
+        CPU::BlockingMicroseconds(safeload ? 8 : 500);
     }
 
     //void ADAU146X::TestProgram() {
