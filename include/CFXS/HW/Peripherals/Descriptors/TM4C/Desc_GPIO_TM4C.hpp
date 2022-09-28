@@ -20,6 +20,7 @@
 
 #include <array>
 #include <inc/hw_memmap.h>
+#include <inc/hw_gpio.h>
 #include <driverlib/gpio.h>
 #include <driverlib/sysctl.h>
 
@@ -42,6 +43,7 @@ namespace CFXS::HW::TM4C {
                             uint32_t gpioDriveCurrent     = 0,
                             uint32_t gpioPinType          = 0,
                             const uint32_t* gpioPinConfig = nullptr) :
+            accessAddress(0),
             base(gpioBase),
             pins(gpioPins),
             periph(gpioPeriph),
@@ -137,22 +139,47 @@ namespace CFXS::HW::TM4C {
                 default: periph = 0; base = 0;
             };
 
-            pins = 0;
+            accessAddress = base + GPIO_O_DATA;
             for (size_t i = 2; i < N; i++) {
                 switch (pin[i]) {
-                    case '0': pins |= GPIO_PIN_0; break;
-                    case '1': pins |= GPIO_PIN_1; break;
-                    case '2': pins |= GPIO_PIN_2; break;
-                    case '3': pins |= GPIO_PIN_3; break;
-                    case '4': pins |= GPIO_PIN_4; break;
-                    case '5': pins |= GPIO_PIN_5; break;
-                    case '6': pins |= GPIO_PIN_6; break;
-                    case '7': pins |= GPIO_PIN_7; break;
+                    case '0':
+                        accessAddress |= (GPIO_PIN_0 << 2);
+                        pins |= GPIO_PIN_0;
+                        break;
+                    case '1':
+                        accessAddress |= (GPIO_PIN_1 << 2);
+                        pins |= GPIO_PIN_1;
+                        break;
+                    case '2':
+                        accessAddress |= (GPIO_PIN_2 << 2);
+                        pins |= GPIO_PIN_2;
+                        break;
+                    case '3':
+                        accessAddress |= (GPIO_PIN_3 << 2);
+                        pins |= GPIO_PIN_3;
+                        break;
+                    case '4':
+                        accessAddress |= (GPIO_PIN_4 << 2);
+                        pins |= GPIO_PIN_4;
+                        break;
+                    case '5':
+                        accessAddress |= (GPIO_PIN_5 << 2);
+                        pins |= GPIO_PIN_5;
+                        break;
+                    case '6':
+                        accessAddress |= (GPIO_PIN_6 << 2);
+                        pins |= GPIO_PIN_6;
+                        break;
+                    case '7':
+                        accessAddress |= (GPIO_PIN_7 << 2);
+                        pins |= GPIO_PIN_7;
+                        break;
                 }
             }
         }
 
     private:
+        uint32_t accessAddress;
         uint32_t base;
         uint16_t pins;
         uint16_t periph; // lower 2 bytes of periph (high bytes are always 0xF000)

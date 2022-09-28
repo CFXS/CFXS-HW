@@ -17,13 +17,14 @@
 // ---------------------------------------------------------------------
 // [CFXS] //
 #ifdef CFXS_PLATFORM_TM4C
-#include <CFXS/HW/Peripherals/GPIO.hpp>
-#include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_GPIO_TM4C.hpp>
-#include <CFXS/HW/System/SystemControl_TM4C.hpp>
-#include <CFXS/Base/Debug.hpp>
-#include <driverlib/gpio.h>
+    #include <CFXS/HW/Peripherals/GPIO.hpp>
+    #include <CFXS/HW/Peripherals/Descriptors/TM4C/Desc_GPIO_TM4C.hpp>
+    #include <CFXS/HW/System/SystemControl_TM4C.hpp>
+    #include <CFXS/Base/Debug.hpp>
+    #include <driverlib/gpio.h>
+    #include <inc/hw_types.h>
 
-#define _descriptor GetDescriptor<Desc_GPIO>()
+    #define _descriptor GetDescriptor<Desc_GPIO>()
 
 namespace CFXS::HW {
 
@@ -36,7 +37,7 @@ namespace CFXS::HW {
         CFXS_ASSERT(_descriptor->base, "Invalid base");
         CFXS_ASSERT(_descriptor->pins, "Invalid pins");
 
-        // Descriptor hold only lower 2 bytes of periph (high bytes are always 0xF000)
+        // Descriptor holds only lower 2 bytes of periph (high bytes are always 0xF000)
         SystemControl::EnablePeripheral(0xF0000000 | _descriptor->periph, true);
 
         GPIOPadConfigSet(_descriptor->base,
@@ -93,20 +94,20 @@ namespace CFXS::HW {
 
     /// Read data from GPIO
     size_t GPIO::Read() const {
-        return GPIOPinRead(_descriptor->base, _descriptor->pins); //
+        return HWREGB(_descriptor->accessAddress); //
     }
 
     /// Write data to GPIO
     void GPIO::Write(size_t data) {
-        GPIOPinWrite(_descriptor->base, _descriptor->pins, data); //
+        HWREGB(_descriptor->accessAddress) = data; //
     }
 
     /// Write data to GPIO
     void GPIO::Write(bool data) {
-        GPIOPinWrite(_descriptor->base, _descriptor->pins, data ? _descriptor->pins : 0); //
+        HWREGB(_descriptor->accessAddress) = data ? 0xFFFFFFFF : 0; //
     }
 
 } // namespace CFXS::HW
 
-#undef _descriptor
+    #undef _descriptor
 #endif
