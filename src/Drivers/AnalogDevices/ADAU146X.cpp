@@ -1,17 +1,17 @@
 // ---------------------------------------------------------------------
 // CFXS Framework Hardware Module <https://github.com/CFXS/CFXS-Hardware>
 // Copyright (C) 2022 | CFXS / Rihards Veips
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 // ---------------------------------------------------------------------
@@ -21,6 +21,23 @@
 #include <CFXS/Platform/CPU.hpp>
 #include <CFXS/Base/Debug.hpp>
 #include <_LoggerConfig.hpp>
+#include <CFXS/Platform/Task.hpp>
+#include <cmath>
+
+CFXS::HW::ADAU146X* g_DSP;
+
+float level_dB;
+
+#include "IC.h"
+#include "SigmaStudioFW.h"
+#define SIGMA_WRITE_REGISTER_BLOCK g_DSP->xSIGMA_WRITE_REGISTER_BLOCK
+#define SIGMA_WRITE_DELAY          g_DSP->xSIGMA_WRITE_DELAY
+#include <X:\CFXS\CFXS-ARM-Framework-Dev\Dev\SigmaDSP\ha_IC_1.h>
+#include <X:\CFXS\CFXS-ARM-Framework-Dev\Dev\SigmaDSP\ha_IC_1_PARAM.h>
+
+float fixed_to_float(uint32_t input, uint8_t fractional_bits) {
+    return ((float)input / (float)(1 << fractional_bits));
+}
 
 namespace CFXS::HW {
 
@@ -36,6 +53,7 @@ namespace CFXS::HW {
     }
 
     void ADAU146X::Initialize() {
+        g_DSP = this;
         CFXS_ASSERT(m_Initialized == false, "Already initialized");
         HardwareLogger_Base::Log("ADAU146X[%p] Initialize", this);
 
@@ -51,6 +69,18 @@ namespace CFXS::HW {
         m_SPI->Enable();
 
         m_Initialized = true;
+
+        auto t = Task::Create(
+            LOW_PRIORITY,
+            "dB",
+            [](auto...) {
+                uint32_t w;
+                g_DSP->ReadWord((uint8_t*)&w, MOD_LEVEL1_ALG0_SINGLEBANDLEVELDETS3001X_ADDR, 4);
+                level_dB = 10 * log10f(fixed_to_float(w, 23));
+                // CFXS_printf("%.1f\n", level_dB);
+            },
+            10);
+        t->Start();
     }
 
     void ADAU146X::Initialize_SPI() {
@@ -112,21 +142,15 @@ namespace CFXS::HW {
 
         m_SPI->Clear_RX_FIFO();
 
+        readTo += count;
         while (count--) {
             m_SPI->Write(0);
-            m_SPI->Read(readTo++);
+            m_SPI->Read(--readTo);
         }
 
         m_SPI->SetCS(true);
         CPU::BlockingMicroseconds(32);
     }
-
-#include "IC.h"
-#define SIGMA_WRITE_REGISTER_BLOCK
-#define SIGMA_WRITE_DELAY
-//#include <../../../Dev/SigmaDSP/Test_IC_1.h>
-#undef SIGMA_WRITE_REGISTER_BLOCK
-#undef SIGMA_WRITE_DELAY
 
     void ADAU146X::xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data) {
         m_SPI->SetCS(false);
@@ -146,100 +170,8 @@ namespace CFXS::HW {
         CPU::BlockingMicroseconds(safeload ? 8 : 500);
     }
 
-    //void ADAU146X::TestProgram() {
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_SOFT_RESET_IC_1_ADDR, REG_SOFT_RESET_IC_1_BYTE, R0_SOFT_RESET_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_SOFT_RESET_IC_1_ADDR, REG_SOFT_RESET_IC_1_BYTE, R1_SOFT_RESET_IC_1_Default);
-    //    xSIGMA_WRITE_DELAY(DEVICE_ADDR_IC_1, R2_RESET_DELAY_IC_1_SIZE, R2_RESET_DELAY_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_HIBERNATE_IC_1_ADDR, REG_HIBERNATE_IC_1_BYTE, R3_HIBERNATE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_HIBERNATE_IC_1_ADDR, REG_HIBERNATE_IC_1_BYTE, R4_HIBERNATE_IC_1_Default);
-    //    xSIGMA_WRITE_DELAY(DEVICE_ADDR_IC_1, R5_HIBERNATE_DELAY_IC_1_SIZE, R5_HIBERNATE_DELAY_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_KILL_CORE_IC_1_ADDR, REG_KILL_CORE_IC_1_BYTE, R6_KILL_CORE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_KILL_CORE_IC_1_ADDR, REG_KILL_CORE_IC_1_BYTE, R7_KILL_CORE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_PLL_ENABLE_IC_1_ADDR, REG_PLL_ENABLE_IC_1_BYTE, R8_PLL_ENABLE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_PLL_CTRL1_IC_1_ADDR, REG_PLL_CTRL1_IC_1_BYTE, R9_PLL_CTRL1_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_PLL_CLK_SRC_IC_1_ADDR, REG_PLL_CLK_SRC_IC_1_BYTE, R10_PLL_CLK_SRC_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_MCLK_OUT_IC_1_ADDR, REG_MCLK_OUT_IC_1_BYTE, R11_MCLK_OUT_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_PLL_ENABLE_IC_1_ADDR, REG_PLL_ENABLE_IC_1_BYTE, R12_PLL_ENABLE_IC_1_Default);
-    //    xSIGMA_WRITE_DELAY(DEVICE_ADDR_IC_1, R13_PLL_LOCK_DELAY_IC_1_SIZE, R13_PLL_LOCK_DELAY_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_POWER_ENABLE0_IC_1_ADDR, REG_POWER_ENABLE0_IC_1_BYTE, R14_POWER_ENABLE0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_POWER_ENABLE1_IC_1_ADDR, REG_POWER_ENABLE1_IC_1_BYTE, R15_POWER_ENABLE1_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE0_IC_1_ADDR, REG_SOUT_SOURCE0_IC_1_BYTE, R16_SOUT_SOURCE0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE1_IC_1_ADDR, REG_SOUT_SOURCE1_IC_1_BYTE, R17_SOUT_SOURCE1_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE2_IC_1_ADDR, REG_SOUT_SOURCE2_IC_1_BYTE, R18_SOUT_SOURCE2_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE3_IC_1_ADDR, REG_SOUT_SOURCE3_IC_1_BYTE, R19_SOUT_SOURCE3_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE4_IC_1_ADDR, REG_SOUT_SOURCE4_IC_1_BYTE, R20_SOUT_SOURCE4_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE5_IC_1_ADDR, REG_SOUT_SOURCE5_IC_1_BYTE, R21_SOUT_SOURCE5_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE6_IC_1_ADDR, REG_SOUT_SOURCE6_IC_1_BYTE, R22_SOUT_SOURCE6_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE7_IC_1_ADDR, REG_SOUT_SOURCE7_IC_1_BYTE, R23_SOUT_SOURCE7_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE8_IC_1_ADDR, REG_SOUT_SOURCE8_IC_1_BYTE, R24_SOUT_SOURCE8_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE9_IC_1_ADDR, REG_SOUT_SOURCE9_IC_1_BYTE, R25_SOUT_SOURCE9_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE10_IC_1_ADDR, REG_SOUT_SOURCE10_IC_1_BYTE, R26_SOUT_SOURCE10_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE11_IC_1_ADDR, REG_SOUT_SOURCE11_IC_1_BYTE, R27_SOUT_SOURCE11_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE12_IC_1_ADDR, REG_SOUT_SOURCE12_IC_1_BYTE, R28_SOUT_SOURCE12_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE13_IC_1_ADDR, REG_SOUT_SOURCE13_IC_1_BYTE, R29_SOUT_SOURCE13_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE14_IC_1_ADDR, REG_SOUT_SOURCE14_IC_1_BYTE, R30_SOUT_SOURCE14_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE15_IC_1_ADDR, REG_SOUT_SOURCE15_IC_1_BYTE, R31_SOUT_SOURCE15_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE16_IC_1_ADDR, REG_SOUT_SOURCE16_IC_1_BYTE, R32_SOUT_SOURCE16_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE17_IC_1_ADDR, REG_SOUT_SOURCE17_IC_1_BYTE, R33_SOUT_SOURCE17_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE18_IC_1_ADDR, REG_SOUT_SOURCE18_IC_1_BYTE, R34_SOUT_SOURCE18_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE19_IC_1_ADDR, REG_SOUT_SOURCE19_IC_1_BYTE, R35_SOUT_SOURCE19_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE20_IC_1_ADDR, REG_SOUT_SOURCE20_IC_1_BYTE, R36_SOUT_SOURCE20_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE21_IC_1_ADDR, REG_SOUT_SOURCE21_IC_1_BYTE, R37_SOUT_SOURCE21_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE22_IC_1_ADDR, REG_SOUT_SOURCE22_IC_1_BYTE, R38_SOUT_SOURCE22_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SOUT_SOURCE23_IC_1_ADDR, REG_SOUT_SOURCE23_IC_1_BYTE, R39_SOUT_SOURCE23_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_0_0_IC_1_ADDR, REG_SERIAL_BYTE_0_0_IC_1_BYTE, R40_SERIAL_BYTE_0_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_1_0_IC_1_ADDR, REG_SERIAL_BYTE_1_0_IC_1_BYTE, R41_SERIAL_BYTE_1_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_2_0_IC_1_ADDR, REG_SERIAL_BYTE_2_0_IC_1_BYTE, R42_SERIAL_BYTE_2_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_3_0_IC_1_ADDR, REG_SERIAL_BYTE_3_0_IC_1_BYTE, R43_SERIAL_BYTE_3_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_4_0_IC_1_ADDR, REG_SERIAL_BYTE_4_0_IC_1_BYTE, R44_SERIAL_BYTE_4_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_5_0_IC_1_ADDR, REG_SERIAL_BYTE_5_0_IC_1_BYTE, R45_SERIAL_BYTE_5_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_6_0_IC_1_ADDR, REG_SERIAL_BYTE_6_0_IC_1_BYTE, R46_SERIAL_BYTE_6_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_SERIAL_BYTE_7_0_IC_1_ADDR, REG_SERIAL_BYTE_7_0_IC_1_BYTE, R47_SERIAL_BYTE_7_0_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, PROGRAM_ADDR_IC_1, PROGRAM_SIZE_IC_1, Program_Data_IC_1);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, PARAM_ADDR_IC_1, PARAM_SIZE_IC_1, Param_Data_IC_1);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, DM1_DATA_ADDR_IC_1, DM1_DATA_SIZE_IC_1, DM1_DATA_Data_IC_1);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_KILL_CORE_IC_1_ADDR, REG_KILL_CORE_IC_1_BYTE, R51_KILL_CORE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(
-    //        DEVICE_ADDR_IC_1, REG_START_ADDRESS_IC_1_ADDR, REG_START_ADDRESS_IC_1_BYTE, R52_START_ADDRESS_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_START_PULSE_IC_1_ADDR, REG_START_PULSE_IC_1_BYTE, R53_START_PULSE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_START_CORE_IC_1_ADDR, REG_START_CORE_IC_1_BYTE, R54_START_CORE_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_START_CORE_IC_1_ADDR, REG_START_CORE_IC_1_BYTE, R55_START_CORE_IC_1_Default);
-    //    xSIGMA_WRITE_DELAY(DEVICE_ADDR_IC_1, R56_START_DELAY_IC_1_SIZE, R56_START_DELAY_IC_1_Default);
-    //    xSIGMA_WRITE_REGISTER_BLOCK(DEVICE_ADDR_IC_1, REG_HIBERNATE_IC_1_ADDR, REG_HIBERNATE_IC_1_BYTE, R57_HIBERNATE_IC_1_Default);
-    //}
+    void ADAU146X::TestProgram() {
+        default_download_IC_1();
+    }
 
 } // namespace CFXS::HW

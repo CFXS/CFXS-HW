@@ -1,17 +1,17 @@
 // ---------------------------------------------------------------------
 // CFXS Framework Hardware Module <https://github.com/CFXS/CFXS-Hardware>
 // Copyright (C) 2022 | CFXS / Rihards Veips
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 // ---------------------------------------------------------------------
@@ -56,7 +56,7 @@ namespace CFXS::HW::TM4C {
         /// \param gpioDriveCurrent GPIO_STRENGTH_xMA
         /// \param gpioPinType GPIO_PIN_TYPE_x
         /// \param gpioPinConfig !null terminated! array of GPIO_Pxy_z (GPIO_PA0_U0RX)
-        template<std::size_t N>
+        template<int N>
         constexpr Desc_GPIO(const char (&pin)[N],
                             uint32_t gpioDriveCurrent     = 0,
                             uint32_t gpioPinType          = 0,

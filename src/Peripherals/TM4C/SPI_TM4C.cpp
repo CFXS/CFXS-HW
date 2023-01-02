@@ -1,17 +1,17 @@
 // ---------------------------------------------------------------------
 // CFXS Framework Hardware Module <https://github.com/CFXS/CFXS-Hardware>
 // Copyright (C) 2022 | CFXS / Rihards Veips
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 // ---------------------------------------------------------------------
@@ -82,8 +82,16 @@ namespace CFXS::HW {
     }
 
     /// Write multiple data units
-    template<typename T>
-    void SPI::Write(T* data, size_t count, bool waitUntilTransmitted) {
+    void SPI::Write(uint8_t* data, size_t count, bool waitUntilTransmitted) {
+        while (count--) {
+            SSIDataPut(_descriptor->base, *data++);
+        }
+        if (waitUntilTransmitted)
+            while (SSIBusy(_descriptor->base)) {
+            }
+    }
+
+    void SPI::Write(uint16_t* data, size_t count, bool waitUntilTransmitted) {
         while (count--) {
             SSIDataPut(_descriptor->base, *data++);
         }
@@ -93,8 +101,7 @@ namespace CFXS::HW {
     }
 
     /// Read single data unit
-    template<typename T>
-    void SPI::Read(T* readTo) {
+    void SPI::Read(uint8_t* readTo) {
         while (!(HWREG(_descriptor->base + SSI_O_SR) & SSI_SR_RNE)) {
         }
         *readTo = HWREG(_descriptor->base + SSI_O_DR);

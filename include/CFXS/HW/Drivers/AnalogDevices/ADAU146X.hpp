@@ -1,17 +1,17 @@
 // ---------------------------------------------------------------------
 // CFXS Framework Hardware Module <https://github.com/CFXS/CFXS-Hardware>
 // Copyright (C) 2022 | CFXS / Rihards Veips
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 // ---------------------------------------------------------------------
@@ -35,13 +35,13 @@ namespace CFXS::HW {
         void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
         void ReadWord(uint8_t* readTo, uint32_t address, size_t count);
 
+        void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data);
+        void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data);
+
     private:
         void Initialize_SPI();        // Initialize SPI peripheral
         void SetSlavePortModeToSPI(); // Place DSP slave port into SPI mode (default is I2C)
         void TestProgram();
-
-        void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data);
-        void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data);
 
     private:
         SPI* m_SPI;
