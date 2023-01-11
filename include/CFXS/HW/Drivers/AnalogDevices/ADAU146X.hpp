@@ -35,8 +35,8 @@ namespace CFXS::HW {
         void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
         void ReadWord(uint8_t* readTo, uint32_t address, size_t count);
 
-        void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, uint8_t* data);
-        void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, uint8_t* data);
+        void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, const void* data, bool safeload = false);
+        void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, const void* data);
 
     private:
         void Initialize_SPI();        // Initialize SPI peripheral
