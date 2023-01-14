@@ -20,14 +20,13 @@
 #include <CFXS/HW/Drivers/AnalogDevices/_Def_ADAU146X.hpp>
 #include <CFXS/Platform/CPU.hpp>
 #include <CFXS/Base/Debug.hpp>
+#include <CFXS/Base/Utility.hpp>
 #include <_LoggerConfig.hpp>
 #include <CFXS/Platform/Task.hpp>
 #include <cmath>
 
 CFXS::HW::ADAU146X* g_DSP;
 
-float level_dB[5];
-float peak_level_dB[5];
 bool threshold_hit[5];
 
 #include "IC.h"
@@ -42,7 +41,6 @@ float fixed_to_float(uint32_t input, uint8_t fractional_bits) {
 }
 
 #define FIXED_BIT 24
-bool s_ResetMaxLevels = true;
 
 unsigned short int float2fix(float n) {
     unsigned short int int_part = 0, frac_part = 0;
@@ -92,80 +90,6 @@ namespace CFXS::HW {
         m_SPI->Enable();
 
         m_Initialized = true;
-
-        auto t = Task::Create(
-            LOW_PRIORITY,
-            "dB",
-            [](auto...) {
-                uint32_t w;
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_1_LEVEL_1_ALG0_SINGLEBANDLEVELDETS3001X_ADDR, 4);
-                level_dB[0] = 10 * log10f(fixed_to_float(w, 23));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_2_LEVEL_2_ALG0_SINGLEBANDLEVELDETS3002X_ADDR, 4);
-                level_dB[1] = 10 * log10f(fixed_to_float(w, 23));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_3_LEVEL_3_ALG0_SINGLEBANDLEVELDETS3003X_ADDR, 4);
-                level_dB[2] = 10 * log10f(fixed_to_float(w, 23));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_4_LEVEL_4_ALG0_SINGLEBANDLEVELDETS3004X_ADDR, 4);
-                level_dB[3] = 10 * log10f(fixed_to_float(w, 23));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_5_LEVEL_5_ALG0_SINGLEBANDLEVELDETS3005X_ADDR, 4);
-                level_dB[4] = 10 * log10f(fixed_to_float(w, 23));
-            },
-            10);
-        t->Start();
-
-        auto tx = Task::Create(
-            LOW_PRIORITY,
-            "Clip Detect",
-            [](auto...) {
-                uint32_t w;
-                if (s_ResetMaxLevels) {
-                    s_ResetMaxLevels = false;
-
-                    w = 0x00000000;
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_1_PEAK_HOLD_1_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_2_PEAK_HOLD_2_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_3_PEAK_HOLD_3_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_4_PEAK_HOLD_4_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_5_PEAK_HOLD_5_ISON_ADDR, 0);
-                    w = 0x00000001;
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_1_PEAK_HOLD_1_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_2_PEAK_HOLD_2_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_3_PEAK_HOLD_3_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_4_PEAK_HOLD_4_ISON_ADDR, 0);
-                    g_DSP->SafeLoad(&w, 1, MOD_SIGNALDETECT_5_PEAK_HOLD_5_ISON_ADDR, 0);
-                } else {
-                    // g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_1_THRESHOLD_HIT_1_READBACKALGNEWSIGMA3001VALUE_ADDR, 4);
-                    // threshold_hit[0] = !w;
-                    // g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_2_THRESHOLD_HIT_2_READBACKALGNEWSIGMA3003VALUE_ADDR, 4);
-                    // threshold_hit[1] = !w;
-                    // g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_3_THRESHOLD_HIT_3_READBACKALGNEWSIGMA3005VALUE_ADDR, 4);
-                    // threshold_hit[2] = !w;
-                    // g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_4_THRESHOLD_HIT_4_READBACKALGNEWSIGMA3007VALUE_ADDR, 4);
-                    // threshold_hit[3] = !w;
-                    // g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_5_THRESHOLD_HIT_5_READBACKALGNEWSIGMA3009VALUE_ADDR, 4);
-                    // threshold_hit[4] = !w;
-                }
-            },
-            5);
-        tx->Start();
-
-        auto tx2 = Task::Create(
-            LOW_PRIORITY,
-            "Peak dB Detect",
-            [](auto...) {
-                uint32_t w;
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_1_PEAK_1_READBACKALGNEWSIGMA3002VALUE_ADDR, 4);
-                peak_level_dB[0] = 20 * log10f(fixed_to_float(w, 24));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_2_PEAK_2_READBACKALGNEWSIGMA3004VALUE_ADDR, 4);
-                peak_level_dB[1] = 20 * log10f(fixed_to_float(w, 24));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_3_PEAK_3_READBACKALGNEWSIGMA3006VALUE_ADDR, 4);
-                peak_level_dB[2] = 20 * log10f(fixed_to_float(w, 24));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_4_PEAK_4_READBACKALGNEWSIGMA3008VALUE_ADDR, 4);
-                peak_level_dB[3] = 20 * log10f(fixed_to_float(w, 24));
-                g_DSP->ReadWord((uint8_t*)&w, MOD_SIGNALDETECT_5_PEAK_5_READBACKALGNEWSIGMA30010VALUE_ADDR, 4);
-                peak_level_dB[4] = 20 * log10f(fixed_to_float(w, 24));
-            },
-            100);
-        tx2->Start();
     }
 
     void ADAU146X::Initialize_SPI() {
@@ -225,7 +149,8 @@ namespace CFXS::HW {
         }
     }
 
-    void ADAU146X::ReadWord(uint8_t* readTo, uint32_t address, size_t count) {
+    void ADAU146X::ReadMemory(void* readToPtr, uint32_t address, size_t count) {
+        uint8_t* readTo = static_cast<uint8_t*>(readToPtr);
         m_SPI->SetCS(false);
         m_SPI->Write(0x01);
         m_SPI->Write(address >> 8);

@@ -20,10 +20,21 @@
 
 #include <CFXS/HW/Peripherals/GPIO.hpp>
 #include <CFXS/HW/Peripherals/SPI.hpp>
+#include <CFXS/Base/Math.hpp>
 
 namespace CFXS::HW {
 
-    class ADAU146X {
+    /// @brief  Provides types for ADAU146X operations
+    struct _ADAU146X_TypeBase {
+        // Parameter RAM address type
+        using Address_t = uint16_t;
+        using Float_t   = CFXS::Math::Float_t;
+    };
+
+    class ADAU146X : _ADAU146X_TypeBase {
+    public:
+        using TypeBase = _ADAU146X_TypeBase;
+
     public:
         /// Create ADAU146X object with Desc_GPIO descriptors
         /// \param spi SPI peripheral
@@ -33,7 +44,7 @@ namespace CFXS::HW {
         void Initialize();
 
         void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
-        void ReadWord(uint8_t* readTo, uint32_t address, size_t count);
+        void ReadMemory(void* readTo, uint32_t address, size_t count);
 
         void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, const void* data, bool safeload = false);
         void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, const void* data);
