@@ -25,43 +25,6 @@
 #include <CFXS/Platform/Task.hpp>
 #include <cmath>
 
-CFXS::HW::ADAU146X* g_DSP;
-
-bool threshold_hit[5];
-
-#include "IC.h"
-#include "SigmaStudioFW.h"
-#define SIGMA_WRITE_REGISTER_BLOCK g_DSP->xSIGMA_WRITE_REGISTER_BLOCK
-#define SIGMA_WRITE_DELAY          g_DSP->xSIGMA_WRITE_DELAY
-#include <X:\CFXS\CFXS-ARM-Framework-Dev\Dev\SigmaDSP\ha_IC_1.h>
-#include <X:\CFXS\CFXS-ARM-Framework-Dev\Dev\SigmaDSP\ha_IC_1_PARAM.h>
-
-float fixed_to_float(uint32_t input, uint8_t fractional_bits) {
-    return ((float)input / (float)(1 << fractional_bits));
-}
-
-#define FIXED_BIT 24
-
-unsigned short int float2fix(float n) {
-    unsigned short int int_part = 0, frac_part = 0;
-    int i;
-    float t;
-
-    int_part = (int)floor(n) << FIXED_BIT;
-    n -= (int)floor(n);
-
-    t = 0.5;
-    for (i = 0; i < FIXED_BIT; i++) {
-        if ((n - t) >= 0) {
-            n -= t;
-            frac_part += (1 << (FIXED_BIT - 1 - i));
-        }
-        t = t / 2;
-    }
-
-    return int_part + frac_part;
-}
-
 namespace CFXS::HW {
 
     using CommandHeader = CommandHeader_ADAU146X;
@@ -74,7 +37,6 @@ namespace CFXS::HW {
     }
 
     void ADAU146X::Initialize() {
-        g_DSP = this;
         CFXS_ASSERT(m_Initialized == false, "Already initialized");
         HardwareLogger_Base::Log("ADAU146X[%p] Initialize", this);
 
@@ -83,7 +45,6 @@ namespace CFXS::HW {
 
         Initialize_SPI();        // Initialize SPI peripheral
         SetSlavePortModeToSPI(); // Place slave port in SPI mode
-        TestProgram();
 
         m_SPI->Disable();
         m_SPI->ConfigureAsMaster(SPI::Mode::MODE_3, SPI_BITRATE_NORMAL, 8);
@@ -122,30 +83,24 @@ namespace CFXS::HW {
         // Write data to safeload data registers
         for (int i = 0; i < count; i++) {
             uint32_t dat = __builtin_bswap32(data[i]);
-            xSIGMA_WRITE_REGISTER_BLOCK(
-                0, static_cast<uint16_t>(Regs_ADAU146X::DATA_SAFELOAD0) + i, 4, reinterpret_cast<uint8_t*>(&dat), true);
+            WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::DATA_SAFELOAD0) + i, 4, reinterpret_cast<uint8_t*>(&dat), true);
         }
 
         // Write starting target address to safeload address register
         address = __builtin_bswap32(address);
-        xSIGMA_WRITE_REGISTER_BLOCK(
-            0, static_cast<uint16_t>(Regs_ADAU146X::ADDRESS_SAFELOAD), 4, reinterpret_cast<uint8_t*>(&address), true);
+        WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::ADDRESS_SAFELOAD), 4, reinterpret_cast<uint8_t*>(&address), true);
 
         // Write number of words to be transferred to memory page to safeload num registers
         // Second write triggers safeload operation
         count = __builtin_bswap32(count);
         if (pageIndex == 0) {
-            xSIGMA_WRITE_REGISTER_BLOCK(
-                0, static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_LOWER), 4, reinterpret_cast<uint8_t*>(&count), true);
+            WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_LOWER), 4, reinterpret_cast<uint8_t*>(&count), true);
             count = 0;
-            xSIGMA_WRITE_REGISTER_BLOCK(
-                0, static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_UPPER), 4, reinterpret_cast<uint8_t*>(&count), true);
+            WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_UPPER), 4, reinterpret_cast<uint8_t*>(&count), true);
         } else {
-            xSIGMA_WRITE_REGISTER_BLOCK(
-                0, static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_UPPER), 4, reinterpret_cast<uint8_t*>(&count), true);
+            WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_UPPER), 4, reinterpret_cast<uint8_t*>(&count), true);
             count = 0;
-            xSIGMA_WRITE_REGISTER_BLOCK(
-                0, static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_LOWER), 4, reinterpret_cast<uint8_t*>(&count), true);
+            WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_LOWER), 4, reinterpret_cast<uint8_t*>(&count), true);
         }
     }
 
@@ -170,11 +125,11 @@ namespace CFXS::HW {
         asm volatile("nop");
     }
 
-    void ADAU146X::xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, const void* data, bool safeload) {
+    void ADAU146X::WriteRegisterBlock(uint16_t addr, size_t dataLen, const void* data, bool safeload) {
         m_SPI->SetCS(false);
-        m_SPI->Write(chipAddr);
-        m_SPI->Write(subAddr >> 8);
-        m_SPI->Write(subAddr & 0xFF);
+        m_SPI->Write(0);
+        m_SPI->Write(addr >> 8);
+        m_SPI->Write(addr & 0xFF);
         m_SPI->Write((uint8_t*)data, dataLen, true);
         m_SPI->SetCS(true);
         // at least 10ns
@@ -184,19 +139,15 @@ namespace CFXS::HW {
             CFXS::CPU::BlockingMilliseconds(1);
     }
 
-    void ADAU146X::xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, const void* data) {
+    void ADAU146X::WriteDelay(size_t dataLen, const void* data) {
         m_SPI->SetCS(false);
-        m_SPI->Write(chipAddr);
+        m_SPI->Write(0);
         m_SPI->Write((uint8_t*)data, dataLen, true);
         m_SPI->SetCS(true);
         // at least 10ns
         asm volatile("nop"); // 1 nop is ~8.33ns @ 120MHz
         asm volatile("nop");
         CFXS::CPU::BlockingMilliseconds(1);
-    }
-
-    void ADAU146X::TestProgram() {
-        default_download_IC_1();
     }
 
 } // namespace CFXS::HW

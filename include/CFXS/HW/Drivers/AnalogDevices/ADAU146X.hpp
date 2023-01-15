@@ -46,13 +46,12 @@ namespace CFXS::HW {
         void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
         void ReadMemory(void* readTo, uint32_t address, size_t count);
 
-        void xSIGMA_WRITE_REGISTER_BLOCK(uint8_t chipAddr, uint16_t subAddr, size_t dataLen, const void* data, bool safeload = false);
-        void xSIGMA_WRITE_DELAY(uint8_t chipAddr, size_t dataLen, const void* data);
+        void WriteRegisterBlock(uint16_t addr, size_t dataLen, const void* data, bool safeload = false);
+        void WriteDelay(size_t dataLen, const void* data);
 
     private:
         void Initialize_SPI();        // Initialize SPI peripheral
         void SetSlavePortModeToSPI(); // Place DSP slave port into SPI mode (default is I2C)
-        void TestProgram();
 
     private:
         SPI* m_SPI;
