@@ -6,19 +6,19 @@ namespace CFXS::HW::Utils::TM4C {
     namespace GPIO {
 
         template<size_t N>
-        constexpr uint32_t DescriptionStringToPins(const char (&pin)[N]) {
+        constexpr uint32_t StringToPins(const char (&pin)[N]) {
             static_assert((N - 1) >= 2, "Invalid pin (format: \"A0\")");
             uint32_t pins = 0;
             for (size_t i = 1; i < N; i++) {
                 switch (pin[i]) {
-                    case '0': pins |= GPIO_PIN_0; break;
-                    case '1': pins |= GPIO_PIN_1; break;
-                    case '2': pins |= GPIO_PIN_2; break;
-                    case '3': pins |= GPIO_PIN_3; break;
-                    case '4': pins |= GPIO_PIN_4; break;
-                    case '5': pins |= GPIO_PIN_5; break;
-                    case '6': pins |= GPIO_PIN_6; break;
-                    case '7': pins |= GPIO_PIN_7; break;
+                    case '0': pins |= 0x00000001; break;
+                    case '1': pins |= 0x00000002; break;
+                    case '2': pins |= 0x00000004; break;
+                    case '3': pins |= 0x00000008; break;
+                    case '4': pins |= 0x00000010; break;
+                    case '5': pins |= 0x00000020; break;
+                    case '6': pins |= 0x00000040; break;
+                    case '7': pins |= 0x00000080; break;
                     default: break;
                 }
             }
@@ -26,53 +26,53 @@ namespace CFXS::HW::Utils::TM4C {
         }
 
         template<size_t N>
-        constexpr uint32_t DescriptionStringToBase(const char (&pin)[N]) {
+        constexpr uint32_t StringToBase(const char (&pin)[N]) {
             static_assert((N - 1) >= 2, "Invalid pin (format: \"A0\")");
             switch (pin[0]) {
-                case 'A': return GPIO_PORTA_BASE;
-                case 'B': return GPIO_PORTB_BASE;
-                case 'C': return GPIO_PORTC_BASE;
-                case 'D': return GPIO_PORTD_BASE;
-                case 'E': return GPIO_PORTE_BASE;
-                case 'F': return GPIO_PORTF_BASE;
-                case 'G': return GPIO_PORTG_BASE;
-                case 'H': return GPIO_PORTH_BASE;
-                case 'J': return GPIO_PORTJ_BASE;
-                case 'K': return GPIO_PORTK_BASE;
-                case 'L': return GPIO_PORTL_BASE;
-                case 'M': return GPIO_PORTM_BASE;
-                case 'N': return GPIO_PORTN_BASE;
-                case 'P': return GPIO_PORTP_BASE;
-                case 'Q': return GPIO_PORTQ_BASE;
-                case 'R': return GPIO_PORTR_BASE;
-                case 'S': return GPIO_PORTS_BASE;
-                case 'T': return GPIO_PORTT_BASE;
+                case 'A': return 0x40004000;
+                case 'B': return 0x40005000;
+                case 'C': return 0x40006000;
+                case 'D': return 0x40007000;
+                case 'E': return 0x40024000;
+                case 'F': return 0x40025000;
+                case 'G': return 0x40026000;
+                case 'H': return 0x40027000;
+                case 'J': return 0x4003D000;
+                case 'K': return 0x40061000;
+                case 'L': return 0x40062000;
+                case 'M': return 0x40063000;
+                case 'N': return 0x40064000;
+                case 'P': return 0x40065000;
+                case 'Q': return 0x40066000;
+                case 'R': return 0x40067000;
+                case 'S': return 0x40068000;
+                case 'T': return 0x40069000;
                 default: return 0;
             };
         }
 
         template<size_t N>
-        constexpr uint32_t DescriptionStringToPeripheral(const char (&pin)[N]) {
+        constexpr uint32_t StringToPeripheral(const char (&pin)[N]) {
             static_assert((N - 1) >= 2, "Invalid pin (format: \"A0\")");
             switch (pin[0]) {
-                case 'A': return SYSCTL_PERIPH_GPIOA;
-                case 'B': return SYSCTL_PERIPH_GPIOB;
-                case 'C': return SYSCTL_PERIPH_GPIOC;
-                case 'D': return SYSCTL_PERIPH_GPIOD;
-                case 'E': return SYSCTL_PERIPH_GPIOE;
-                case 'F': return SYSCTL_PERIPH_GPIOF;
-                case 'G': return SYSCTL_PERIPH_GPIOG;
-                case 'H': return SYSCTL_PERIPH_GPIOH;
-                case 'J': return SYSCTL_PERIPH_GPIOJ;
-                case 'K': return SYSCTL_PERIPH_GPIOK;
-                case 'L': return SYSCTL_PERIPH_GPIOL;
-                case 'M': return SYSCTL_PERIPH_GPIOM;
-                case 'N': return SYSCTL_PERIPH_GPION;
-                case 'P': return SYSCTL_PERIPH_GPIOP;
-                case 'Q': return SYSCTL_PERIPH_GPIOQ;
-                case 'R': return SYSCTL_PERIPH_GPIOR;
-                case 'S': return SYSCTL_PERIPH_GPIOS;
-                case 'T': return SYSCTL_PERIPH_GPIOT;
+                case 'A': return 0xF0000800;
+                case 'B': return 0xF0000801;
+                case 'C': return 0xF0000802;
+                case 'D': return 0xF0000803;
+                case 'E': return 0xF0000804;
+                case 'F': return 0xF0000805;
+                case 'G': return 0xF0000806;
+                case 'H': return 0xF0000807;
+                case 'J': return 0xF0000808;
+                case 'K': return 0xF0000809;
+                case 'L': return 0xF000080A;
+                case 'M': return 0xF000080B;
+                case 'N': return 0xF000080C;
+                case 'P': return 0xF000080D;
+                case 'Q': return 0xF000080E;
+                case 'R': return 0xF000080F;
+                case 'S': return 0xF0000810;
+                case 'T': return 0xF0000811;
                 default: return 0;
             };
         }
