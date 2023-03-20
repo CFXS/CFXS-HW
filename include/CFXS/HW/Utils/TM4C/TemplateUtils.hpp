@@ -1,6 +1,8 @@
 // [CFXS] //
 #pragma once
 
+// Register base and peripheral addresses are the same for all TM4C series devices
+
 namespace CFXS::HW::Utils::TM4C {
 
     namespace GPIO {
