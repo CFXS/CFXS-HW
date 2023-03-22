@@ -31,9 +31,9 @@ namespace CFXS::HW {
         using CommandHeader = CommandHeader_ADAU146X;
 
     public:
+        using Register  = Regs_ADAU146X;
         using Address_t = uint16_t;
         using Float_t   = CFXS::Math::Float_t;
-        using Register  = Regs_ADAU146X;
 
         static constexpr auto SPI_BITRATE_INITIAL = 1000000;  // 1MHz
         static constexpr auto SPI_BITRATE_NORMAL  = 10000000; // 10MHz
@@ -41,6 +41,7 @@ namespace CFXS::HW {
     public:
         constexpr ADAU146X() = default;
 
+        /// @brief Initialize peripherals and put DSP into SPI mode
         void Initialize() {
             CFXS_ASSERT(m_Initialized == false, "Already initialized");
             // HardwareLogger_Base::Log("ADAU146X[%p] Initialize", this);
@@ -54,6 +55,11 @@ namespace CFXS::HW {
             m_Initialized = true;
         }
 
+        /// @brief Perform safe-load operation (load before next audio sample processing)
+        /// @param data data to safely load
+        /// @param count number of words to load
+        /// @param address load start address
+        /// @param pageIndex load memory page
         void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex) {
             // safeload = true;
             CFXS_ASSERT(count >= 1 && count <= 5, "Invalid count");
@@ -83,6 +89,10 @@ namespace CFXS::HW {
             }
         }
 
+        /// @brief Read DSP memory (registers/RAM)
+        /// @param readToPtr read to this address
+        /// @param address DSP memory address to read from
+        /// @param count bytes to read
         void ReadMemory(void* readToPtr, uint32_t address, size_t count) {
             uint8_t* readTo = static_cast<uint8_t*>(readToPtr);
             SPI_INTERFACE{}.SetCS(false);
@@ -103,6 +113,9 @@ namespace CFXS::HW {
             asm volatile("nop");
         }
 
+        /// @brief Read DSP register
+        /// @param readToPtr read register value to this address
+        /// @param reg DSP register to read
         void ReadRegister(uint16_t* readToPtr, Register reg) {
             uint16_t address = (uint16_t)reg;
             uint8_t* readTo  = reinterpret_cast<uint8_t*>(readToPtr);
@@ -124,6 +137,11 @@ namespace CFXS::HW {
             asm volatile("nop");
         }
 
+        /// @brief Write multiple DSP registers
+        /// @param addr DSP register start address
+        /// @param dataLen number of bytes to write
+        /// @param data data to write
+        /// @param safeload is this called from a safe-load context
         void WriteRegisterBlock(uint16_t addr, size_t dataLen, const void* data, bool safeload = false) {
             SPI_INTERFACE{}.SetCS(false);
             SPI_INTERFACE{}.WriteList(0, addr >> 8, addr & 0xFF);
@@ -137,6 +155,7 @@ namespace CFXS::HW {
                 CFXS::CPU::BlockingMilliseconds(1);
         }
 
+        /// @brief No idea what this is, needed for SigmaDSP generated programming sequence
         void WriteDelay(size_t dataLen, const void* data) {
             SPI_INTERFACE{}.SetCS(false);
             SPI_INTERFACE{}.Write(0);
@@ -150,16 +169,15 @@ namespace CFXS::HW {
         }
 
     private:
-        void Initialize_SPI() { // Initialize SPI peripheral
+        /// @brief Initialize and enable SPI peripheral
+        void Initialize_SPI() {
             SPI_INTERFACE{}.Initialize();
             SPI_INTERFACE{}.ConfigureAsMaster(SPI::Mode::MODE_3, SPI_BITRATE_NORMAL, 8);
             SPI_INTERFACE{}.Enable();
         }
 
-        // The slave port can be put into SPI mode by performing 3 dummy writes to any subaddress
-        // These writes are ignored by the slave port
+        /// @brief The slave port can be put into SPI mode by performing 3 dummy writes to any subaddress
         void SetSlavePortModeToSPI() {
-            // HardwareLogger_Base::Log(" - Set slave port to SPI mode");
             CPU::BlockingMilliseconds(1);
             for (int i = 0; i < 3; i++) {
                 SPI_INTERFACE{}.SetCS(false);
