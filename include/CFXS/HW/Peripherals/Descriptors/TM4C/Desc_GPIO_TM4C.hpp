@@ -140,6 +140,7 @@ namespace CFXS::HW::TM4C {
             };
 
             accessAddress = base + GPIO_O_DATA;
+            pins          = 0;
             for (size_t i = 2; i < N; i++) {
                 switch (pin[i]) {
                     case '0':

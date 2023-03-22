@@ -18,45 +18,158 @@
 // [CFXS] //
 #pragma once
 
-#include <CFXS/HW/Peripherals/GPIO.hpp>
-#include <CFXS/HW/Peripherals/SPI.hpp>
+#include <CFXS/Base/Debug.hpp>
 #include <CFXS/Base/Math.hpp>
+#include <CFXS/Platform/CPU.hpp>
+#include <CFXS/HW/Peripherals/SPI.hpp>
+#include "_Def_ADAU146X.hpp"
 
 namespace CFXS::HW {
 
-    /// @brief  Provides types for ADAU146X operations
-    struct _ADAU146X_TypeBase {
-        // Parameter RAM address type
+    template<typename SPI_INTERFACE, typename RESET_PIN>
+    class ADAU146X {
+        using CommandHeader = CommandHeader_ADAU146X;
+
+    public:
         using Address_t = uint16_t;
         using Float_t   = CFXS::Math::Float_t;
-    };
+        using Register  = Regs_ADAU146X;
 
-    class ADAU146X : _ADAU146X_TypeBase {
+        static constexpr auto SPI_BITRATE_INITIAL = 1000000;  // 1MHz
+        static constexpr auto SPI_BITRATE_NORMAL  = 10000000; // 10MHz
+
     public:
-        using TypeBase = _ADAU146X_TypeBase;
+        constexpr ADAU146X() = default;
 
-    public:
-        /// Create ADAU146X object with Desc_GPIO descriptors
-        /// \param spi SPI peripheral
-        /// \param gpiodesc_nReset GPIO descriptor for NRESET pin - nullptr if reset pin not used
-        ADAU146X(SPI* spi, const void* gpiodesc_nReset = nullptr);
+        void Initialize() {
+            CFXS_ASSERT(m_Initialized == false, "Already initialized");
+            // HardwareLogger_Base::Log("ADAU146X[%p] Initialize", this);
 
-        void Initialize();
+            RESET_PIN{}.ConfigureAsOutput();
+            RESET_PIN{}.Write(true);
 
-        void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex);
-        void ReadMemory(void* readTo, uint32_t address, size_t count);
+            Initialize_SPI();        // Initialize SPI peripheral
+            SetSlavePortModeToSPI(); // Place slave port in SPI mode
 
-        void WriteRegisterBlock(uint16_t addr, size_t dataLen, const void* data, bool safeload = false);
-        void WriteDelay(size_t dataLen, const void* data);
+            m_Initialized = true;
+        }
+
+        void SafeLoad(uint32_t* data, size_t count, uint32_t address, size_t pageIndex) {
+            // safeload = true;
+            CFXS_ASSERT(count >= 1 && count <= 5, "Invalid count");
+            CFXS_ASSERT(pageIndex <= 1, "Invalid page index");
+
+            // Write data to safeload data registers
+            for (int i = 0; i < count; i++) {
+                uint32_t dat = __builtin_bswap32(data[i]);
+                WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::DATA_SAFELOAD0) + i, 4, reinterpret_cast<uint8_t*>(&dat), true);
+            }
+
+            // Write starting target address to safeload address register
+            address = __builtin_bswap32(address);
+            WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::ADDRESS_SAFELOAD), 4, reinterpret_cast<uint8_t*>(&address), true);
+
+            // Write number of words to be transferred to memory page to safeload num registers
+            // Second write triggers safeload operation
+            count = __builtin_bswap32(count);
+            if (pageIndex == 0) {
+                WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_LOWER), 4, reinterpret_cast<uint8_t*>(&count), true);
+                count = 0;
+                WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_UPPER), 4, reinterpret_cast<uint8_t*>(&count), true);
+            } else {
+                WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_UPPER), 4, reinterpret_cast<uint8_t*>(&count), true);
+                count = 0;
+                WriteRegisterBlock(static_cast<uint16_t>(Regs_ADAU146X::NUM_SAFELOAD_LOWER), 4, reinterpret_cast<uint8_t*>(&count), true);
+            }
+        }
+
+        void ReadMemory(void* readToPtr, uint32_t address, size_t count) {
+            uint8_t* readTo = static_cast<uint8_t*>(readToPtr);
+            SPI_INTERFACE{}.SetCS(false);
+            SPI_INTERFACE{}.WriteList(0x01, address >> 8, address & 0xFF);
+            SPI_INTERFACE{}.WaitForTransferFinished();
+            SPI_INTERFACE{}.Clear_RX_FIFO();
+
+            readTo += count;
+            while (count--) {
+                SPI_INTERFACE{}.Write(0);
+                SPI_INTERFACE{}.WaitForTransferFinished();
+                SPI_INTERFACE{}.Read(--readTo);
+            }
+
+            SPI_INTERFACE{}.SetCS(true);
+            // at least 10ns
+            asm volatile("nop"); // 1 nop is ~8.33ns @ 120MHz
+            asm volatile("nop");
+        }
+
+        void ReadRegister(uint16_t* readToPtr, Register reg) {
+            uint16_t address = (uint16_t)reg;
+            uint8_t* readTo  = reinterpret_cast<uint8_t*>(readToPtr);
+            SPI_INTERFACE{}.SetCS(false);
+            SPI_INTERFACE{}.WriteList(0x01, address >> 8, address & 0xFF);
+            SPI_INTERFACE{}.WaitForTransferFinished();
+            SPI_INTERFACE{}.Clear_RX_FIFO();
+
+            SPI_INTERFACE{}.Write(0);
+            SPI_INTERFACE{}.WaitForTransferFinished();
+            SPI_INTERFACE{}.Read(readTo + 1);
+            SPI_INTERFACE{}.Write(0);
+            SPI_INTERFACE{}.WaitForTransferFinished();
+            SPI_INTERFACE{}.Read(readTo);
+
+            SPI_INTERFACE{}.SetCS(true);
+            // at least 10ns
+            asm volatile("nop"); // 1 nop is ~8.33ns @ 120MHz
+            asm volatile("nop");
+        }
+
+        void WriteRegisterBlock(uint16_t addr, size_t dataLen, const void* data, bool safeload = false) {
+            SPI_INTERFACE{}.SetCS(false);
+            SPI_INTERFACE{}.WriteList(0, addr >> 8, addr & 0xFF);
+            SPI_INTERFACE{}.Write((uint8_t*)data, dataLen);
+            SPI_INTERFACE{}.WaitForTransferFinished();
+            SPI_INTERFACE{}.SetCS(true);
+            // at least 10ns
+            asm volatile("nop"); // 1 nop is ~8.33ns @ 120MHz
+            asm volatile("nop");
+            if (!safeload)
+                CFXS::CPU::BlockingMilliseconds(1);
+        }
+
+        void WriteDelay(size_t dataLen, const void* data) {
+            SPI_INTERFACE{}.SetCS(false);
+            SPI_INTERFACE{}.Write(0);
+            SPI_INTERFACE{}.Write((uint8_t*)data, dataLen);
+            SPI_INTERFACE{}.WaitForTransferFinished();
+            SPI_INTERFACE{}.SetCS(true);
+            // at least 10ns
+            asm volatile("nop"); // 1 nop is ~8.33ns @ 120MHz
+            asm volatile("nop");
+            CFXS::CPU::BlockingMilliseconds(1);
+        }
 
     private:
-        void Initialize_SPI();        // Initialize SPI peripheral
-        void SetSlavePortModeToSPI(); // Place DSP slave port into SPI mode (default is I2C)
+        void Initialize_SPI() { // Initialize SPI peripheral
+            SPI_INTERFACE{}.Initialize();
+            SPI_INTERFACE{}.ConfigureAsMaster(SPI::Mode::MODE_3, SPI_BITRATE_NORMAL, 8);
+            SPI_INTERFACE{}.Enable();
+        }
+
+        // The slave port can be put into SPI mode by performing 3 dummy writes to any subaddress
+        // These writes are ignored by the slave port
+        void SetSlavePortModeToSPI() {
+            // HardwareLogger_Base::Log(" - Set slave port to SPI mode");
+            CPU::BlockingMilliseconds(1);
+            for (int i = 0; i < 3; i++) {
+                SPI_INTERFACE{}.SetCS(false);
+                CPU::BlockingMilliseconds(1);
+                SPI_INTERFACE{}.SetCS(true);
+                CPU::BlockingMilliseconds(1);
+            }
+        }
 
     private:
-        SPI* m_SPI;
-        GPIO m_pin_nReset;
-
         bool m_Initialized = false;
     };
 

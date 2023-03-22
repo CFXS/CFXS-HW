@@ -7,9 +7,11 @@ namespace CFXS::HW::Utils::TM4C {
 
     namespace GPIO {
 
+        /// @brief Convert port string to pin mask
+        /// @param pin port string "A0" / "B1,2,3"
+        /// @return Pin mask
         template<size_t N>
-        constexpr uint32_t StringToPins(const char (&pin)[N]) {
-            static_assert((N - 1) >= 2, "Invalid pin (format: \"A0\")");
+        constexpr uint32_t PortStringToPins(const char (&pin)[N]) {
             uint32_t pins = 0;
             for (size_t i = 1; i < N; i++) {
                 switch (pin[i]) {
@@ -27,9 +29,11 @@ namespace CFXS::HW::Utils::TM4C {
             return pins;
         }
 
+        /// @brief Convert port string to GPIO port base register address
+        /// @param pin port string "A0" / "B1,2,3"
+        /// @return GPIO port base register
         template<size_t N>
-        constexpr uint32_t StringToBase(const char (&pin)[N]) {
-            static_assert((N - 1) >= 2, "Invalid pin (format: \"A0\")");
+        constexpr uint32_t PortStringToBase(const char (&pin)[N]) {
             switch (pin[0]) {
                 case 'A': return 0x40004000;
                 case 'B': return 0x40005000;
@@ -53,9 +57,11 @@ namespace CFXS::HW::Utils::TM4C {
             };
         }
 
+        /// @brief Convert port string to SystemControl GPIO port register
+        /// @param pin port string "A0" / "B1,2,3"
+        /// @return SystemControl address of GPIO base
         template<size_t N>
-        constexpr uint32_t StringToPeripheral(const char (&pin)[N]) {
-            static_assert((N - 1) >= 2, "Invalid pin (format: \"A0\")");
+        constexpr uint32_t PortStringToPeripheral(const char (&pin)[N]) {
             switch (pin[0]) {
                 case 'A': return 0xF0000800;
                 case 'B': return 0xF0000801;
