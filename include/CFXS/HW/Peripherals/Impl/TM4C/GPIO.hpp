@@ -8,6 +8,8 @@
                                 CFXS::HW::Utils::TM4C::GPIO::PortStringToPins(str), \
                                 CFXS::HW::Utils::TM4C::GPIO::PortStringToPeripheral(str)>
 
+#define DEF_UNIMPLEMENTED_GPIO_TM4C(str) CFXS::HW::TM4C::Unimplemented_GPIO
+
 namespace CFXS::HW::TM4C {
 
     class GPIO {
@@ -133,8 +135,7 @@ namespace CFXS::HW::TM4C {
         }
 
         template<class F>
-        static void _ConfigurePinRouting(F f) {
-        }
+        static void _ConfigurePinRouting(F f) {}
     };
 
     template<uint32_t BASE = 0, uint8_t PINS = 0, uint32_t SYSCTL = 0>
@@ -146,21 +147,15 @@ namespace CFXS::HW::TM4C {
 
         /// @brief Get GPIO port SystemControl address
         /// @return GPIO port SystemControl address
-        constexpr uint32_t GetSystemControlAddress() const {
-            return SYSCTL;
-        }
+        constexpr uint32_t GetSystemControlAddress() const { return SYSCTL; }
 
         /// @brief Get GPIO port register base address
         /// @return GPIO port register base address
-        constexpr uint32_t GetBase() const {
-            return BASE;
-        }
+        constexpr uint32_t GetBase() const { return BASE; }
 
         /// @brief Get GPIO pins
         /// @return GPIO pins
-        constexpr uint32_t GetPins() const {
-            return PINS;
-        }
+        constexpr uint32_t GetPins() const { return PINS; }
 
         /// @brief Set or clear configured pin mask to configured port
         /// @param s true = set, false = clear
@@ -260,6 +255,22 @@ namespace CFXS::HW::TM4C {
             ConfigureAsInput();
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::ANALOG);
         }
+    };
+
+    class Unimplemented_GPIO {
+    public:
+        constexpr Unimplemented_GPIO() = default;
+        constexpr uint32_t GetSystemControlAddress() const { return 0; }
+        constexpr uint32_t GetBase() const { return 0; }
+        constexpr uint32_t GetPins() const { return 0; }
+        constexpr void Write(bool s) const {}
+        constexpr void DirectWrite(uint32_t mask) const {}
+        constexpr uint32_t DirectRead() const { return 0; }
+        constexpr void SetConfig(uint32_t drive_strength, uint32_t pin_type) const {}
+        constexpr void ConfigureAsInput() const {}
+        constexpr void ConfigureAsOutput() const {}
+        constexpr void ConfigureAsHardware() const {}
+        constexpr void ConfigureAsAnalog() const {}
     };
 
 } // namespace CFXS::HW::TM4C
