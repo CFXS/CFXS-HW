@@ -137,24 +137,16 @@ namespace CFXS::HW::TM4C {
         }
 
         /// @brief Enable SPI
-        constexpr void Enable() const {
-            __mem32(GetBase() + SPI::BaseOffset::CR1) |= SPI::Register::CR1::SSE;
-        }
+        constexpr void Enable() const { __mem32(GetBase() + SPI::BaseOffset::CR1) |= SPI::Register::CR1::SSE; }
 
         /// @brief Disable SPI
-        constexpr void Disable() const {
-            __mem32(GetBase() + SPI::BaseOffset::CR1) &= ~SPI::Register::CR1::SSE;
-        }
+        constexpr void Disable() const { __mem32(GetBase() + SPI::BaseOffset::CR1) &= ~SPI::Register::CR1::SSE; }
 
-        constexpr bool IsEnabled() const {
-            return __mem32(GetBase() + SPI::BaseOffset::CR1) & SPI::Register::CR1::SSE;
-        }
+        constexpr bool IsEnabled() const { return __mem32(GetBase() + SPI::BaseOffset::CR1) & SPI::Register::CR1::SSE; }
 
         /// @brief Set chipselect level
         /// @param state true = high
-        constexpr void SetCS(bool state) const {
-            CS{}.Write(state);
-        }
+        constexpr void SetCS(bool state) const { CS{}.Write(state); }
 
         /// @brief Read all data from RX FIFO
         constexpr void Clear_RX_FIFO() const {
@@ -213,21 +205,15 @@ namespace CFXS::HW::TM4C {
 
         /// @brief Check if SPI TX FIFO is full
         /// @return true if FIFO full
-        constexpr bool Is_TX_FIFO_Full() const {
-            return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::TNF);
-        }
+        constexpr bool Is_TX_FIFO_Full() const { return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::TNF); }
 
         /// @brief Check if SPI RX FIFO is empty
         /// @return true if empty
-        constexpr bool Is_RX_FIFO_Empty() const {
-            return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::RNE);
-        }
+        constexpr bool Is_RX_FIFO_Empty() const { return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::RNE); }
 
         /// @brief Check if SPI busy (transfer in progress)
         /// @return true if busy
-        constexpr bool IsBusy() const {
-            return (__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::BSY) ? true : false;
-        }
+        constexpr bool IsBusy() const { return (__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::BSY) ? true : false; }
 
         /// @brief Wait for transfer to finish
         constexpr void WaitForTransferFinished() {
@@ -257,8 +243,7 @@ namespace CFXS::HW::TM4C {
         }
 
         template<class F>
-        constexpr void _WriteList(F f) {
-        }
+        constexpr void _WriteList(F f) {}
     };
 
 } // namespace CFXS::HW::TM4C
