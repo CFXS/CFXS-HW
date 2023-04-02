@@ -1,5 +1,6 @@
 // [CFXS] //
 #pragma once
+#include <CFXS/HW/Peripherals/SPI.hpp>
 #include <CFXS/HW/Utils/TM4C/TemplateUtils.hpp>
 #include <CFXS/HW/System/SystemControl_TM4C.hpp>
 #include <initializer_list>
