@@ -135,7 +135,8 @@ namespace CFXS::HW::TM4C {
         }
 
         template<class F>
-        static void _ConfigurePinRouting(F f) {}
+        static void _ConfigurePinRouting(F f) {
+        }
     };
 
     template<uint32_t BASE = 0, uint8_t PINS = 0, uint32_t SYSCTL = 0>
@@ -147,15 +148,21 @@ namespace CFXS::HW::TM4C {
 
         /// @brief Get GPIO port SystemControl address
         /// @return GPIO port SystemControl address
-        constexpr uint32_t GetSystemControlAddress() const { return SYSCTL; }
+        constexpr uint32_t GetSystemControlAddress() const {
+            return SYSCTL;
+        }
 
         /// @brief Get GPIO port register base address
         /// @return GPIO port register base address
-        constexpr uint32_t GetBase() const { return BASE; }
+        constexpr uint32_t GetBase() const {
+            return BASE;
+        }
 
         /// @brief Get GPIO pins
         /// @return GPIO pins
-        constexpr uint32_t GetPins() const { return PINS; }
+        constexpr uint32_t GetPins() const {
+            return PINS;
+        }
 
         /// @brief Set or clear configured pin mask to configured port
         /// @param s true = set, false = clear
@@ -172,6 +179,21 @@ namespace CFXS::HW::TM4C {
         constexpr void DirectWrite(uint32_t mask) const {
             // TODO: check if 8bit access is faster than 32bit
             __mem32(BASE + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = mask;
+        }
+
+        /// @brief Write pin mask to configured port to -SHIFT shifted base
+        /// @param val
+        template<size_t SHIFT>
+        constexpr void DirectWrite_SHIFTED_BASE(uint32_t mask) const {
+            // TODO: check if 8bit access is faster than 32bit
+            __mem32((BASE - SHIFT) + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = mask;
+        }
+
+        /// @brief Write pin mask to configured port to -SHIFT shifted base
+        /// @param val
+        constexpr void DirectWrite_SHIFTED_BASE(uint32_t mask) const {
+            // TODO: check if 8bit access is faster than 32bit
+            __mem32((BASE - 1) + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = mask;
         }
 
         /// @brief Read configured GPIO port with pin mask
@@ -260,17 +282,32 @@ namespace CFXS::HW::TM4C {
     class Unimplemented_GPIO {
     public:
         constexpr Unimplemented_GPIO() = default;
-        constexpr uint32_t GetSystemControlAddress() const { return 0; }
-        constexpr uint32_t GetBase() const { return 0; }
-        constexpr uint32_t GetPins() const { return 0; }
-        constexpr void Write(bool s) const {}
-        constexpr void DirectWrite(uint32_t mask) const {}
-        constexpr uint32_t DirectRead() const { return 0; }
-        constexpr void SetConfig(uint32_t drive_strength, uint32_t pin_type) const {}
-        constexpr void ConfigureAsInput() const {}
-        constexpr void ConfigureAsOutput() const {}
-        constexpr void ConfigureAsHardware() const {}
-        constexpr void ConfigureAsAnalog() const {}
+        constexpr uint32_t GetSystemControlAddress() const {
+            return 0;
+        }
+        constexpr uint32_t GetBase() const {
+            return 0;
+        }
+        constexpr uint32_t GetPins() const {
+            return 0;
+        }
+        constexpr void Write(bool s) const {
+        }
+        constexpr void DirectWrite(uint32_t mask) const {
+        }
+        constexpr uint32_t DirectRead() const {
+            return 0;
+        }
+        constexpr void SetConfig(uint32_t drive_strength, uint32_t pin_type) const {
+        }
+        constexpr void ConfigureAsInput() const {
+        }
+        constexpr void ConfigureAsOutput() const {
+        }
+        constexpr void ConfigureAsHardware() const {
+        }
+        constexpr void ConfigureAsAnalog() const {
+        }
     };
 
 } // namespace CFXS::HW::TM4C
