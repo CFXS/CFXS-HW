@@ -36,7 +36,7 @@ namespace CFXS::HW {
         using Float_t   = CFXS::Math::Float_t;
 
         static constexpr auto SPI_BITRATE_INITIAL = 1000000; // 1MHz
-        static constexpr auto SPI_BITRATE_NORMAL  = 8000000; // 8MHz
+        static constexpr auto SPI_BITRATE_NORMAL  = 4000000; // 4MHz
 
     public:
         constexpr ADAU146X() = default;
