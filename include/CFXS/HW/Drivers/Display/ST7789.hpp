@@ -4,7 +4,7 @@
 
 namespace CFXS::HW {
 
-    class ST7789 {
+    class _ST7789_Base {
     public:
         enum Command : uint8_t {
             NOP                        = 0x00,
@@ -97,27 +97,27 @@ namespace CFXS::HW {
             CFXS::CPU::BlockingMicroseconds(1);
             DCSEL_PIN{}.Write(false);
 
-            SPI{}.Write(ST7789::Command::RESET);
+            SPI{}.Write(_ST7789_Base::Command::RESET);
             SPI{}.WaitForTransferFinished();
             SPI{}.SetCS(true);
             CFXS::CPU::BlockingMilliseconds(1);
             SPI{}.SetCS(false);
-            SPI{}.WriteList(ST7789::Command::SLEEP_OFF,
-                            ST7789::Command::NOP,
-                            ST7789::Command::DISPLAY_ON,
-                            ST7789::Command::NOP,
-                            ST7789::Command::INVERT_ON,
-                            ST7789::Command::NOP);
+            SPI{}.WriteList(_ST7789_Base::Command::SLEEP_OFF,
+                            _ST7789_Base::Command::NOP,
+                            _ST7789_Base::Command::DISPLAY_ON,
+                            _ST7789_Base::Command::NOP,
+                            _ST7789_Base::Command::INVERT_ON,
+                            _ST7789_Base::Command::NOP);
             SPI{}.WaitForTransferFinished();
 
-            SendCommand(ST7789::Command::INTERFACE_PIXEL_FORMAT);
+            SendCommand(_ST7789_Base::Command::INTERFACE_PIXEL_FORMAT);
             SendData(0b01010101); // 65K 16bit
 
-            SendCommand(ST7789::Command::SET_GAMMA);
-            SendData(ST7789::Gamma::_2_2);
+            SendCommand(_ST7789_Base::Command::SET_GAMMA);
+            SendData(_ST7789_Base::Gamma::_2_2);
         }
 
-        constexpr void SendCommand(ST7789::Command command) {
+        constexpr void SendCommand(_ST7789_Base::Command command) {
             SPI{}.WaitForTransferFinished();
             DCSEL_PIN{}.Write(false);
             SPI{}.Write(command);
@@ -139,13 +139,13 @@ namespace CFXS::HW {
         constexpr void SetRegion(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
             x += X_PANEL_OFFSET;
             y += Y_PANEL_OFFSET;
-            SendCommand(ST7789::Command::COL_ADDRESS_SET);
+            SendCommand(_ST7789_Base::Command::COL_ADDRESS_SET);
             SPI{}.WaitForTransferFinished();
             DCSEL_PIN{}.Write(true);
             SPI{}.WriteList(x >> 8, x);
             x += w - 1;
             SPI{}.WriteList(x >> 8, x);
-            SendCommand(ST7789::Command::ROW_ADDRESS_SET);
+            SendCommand(_ST7789_Base::Command::ROW_ADDRESS_SET);
             SPI{}.WaitForTransferFinished();
             DCSEL_PIN{}.Write(true);
             SPI{}.WriteList(y >> 8, y);
@@ -155,7 +155,7 @@ namespace CFXS::HW {
 
         constexpr void ClearColorRegion16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
             SetRegion(x, y, w, h);
-            SendCommand(ST7789::Command::MEMORY_WRITE);
+            SendCommand(_ST7789_Base::Command::MEMORY_WRITE);
 
             uint8_t a = color >> 8;
             uint8_t b = color;
@@ -169,7 +169,7 @@ namespace CFXS::HW {
 
         constexpr void SendColorRegion16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t* color_data) {
             SetRegion(x, y, w, h);
-            SendCommand(ST7789::Command::MEMORY_WRITE);
+            SendCommand(_ST7789_Base::Command::MEMORY_WRITE);
 
             SPI{}.WaitForTransferFinished();
             DCSEL_PIN{}.Write(true);
@@ -179,9 +179,9 @@ namespace CFXS::HW {
     };
 
     template<typename INTERFACE>
-    class ST7789_Static {
+    class ST7789 {
     public:
-        using Base = ST7789;
+        using Base = _ST7789_Base;
 
         static constexpr uint16_t BASE_WIDTH  = INTERFACE::WIDTH;
         static constexpr uint16_t BASE_HEIGHT = INTERFACE::HEIGHT;
@@ -204,7 +204,7 @@ namespace CFXS::HW {
                                    bool flip_y,
                                    bool refresh_left_to_right = true,
                                    bool refresh_top_to_bottom = true) {
-            INTERFACE{}.SendCommand(ST7789::Command::MEMORY_DATA_ACCESS_CONTROL);
+            INTERFACE{}.SendCommand(_ST7789_Base::Command::MEMORY_DATA_ACCESS_CONTROL);
             INTERFACE{}.SendData((flip_y ? 0x80 : 0) |                // BOTTOM TO TOP
                                  (flip_x ? 0x40 : 0) |                // RIGHT TO LEFT
                                  (swap_xy ? 0x20 : 0) |               // XY REVERSE
@@ -214,14 +214,14 @@ namespace CFXS::HW {
                                  0);
         }
 
-        static void SetFrameRate(ST7789::FrameRate rate) {
-            INTERFACE{}.SendCommand(ST7789::Command::FRAMERATE_CONTROL_2);
+        static void SetFrameRate(_ST7789_Base::FrameRate rate) {
+            INTERFACE{}.SendCommand(_ST7789_Base::Command::FRAMERATE_CONTROL_2);
             INTERFACE{}.SendData(rate);
         }
 
         static void Enable_VSYNC_Output(uint16_t scanline) {
-            INTERFACE{}.SendCommand(ST7789::Command::TEARING_EFFECT_ON);
-            INTERFACE{}.SendCommand(ST7789::Command::SET_TEAR_SCANLINE);
+            INTERFACE{}.SendCommand(_ST7789_Base::Command::TEARING_EFFECT_ON);
+            INTERFACE{}.SendCommand(_ST7789_Base::Command::SET_TEAR_SCANLINE);
             INTERFACE{}.SendData(scanline >> 8);
             INTERFACE{}.SendData(scanline);
         }
