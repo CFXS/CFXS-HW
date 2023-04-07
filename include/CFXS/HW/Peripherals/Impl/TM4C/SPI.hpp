@@ -5,6 +5,14 @@
 #include <CFXS/HW/System/SystemControl_TM4C.hpp>
 #include <initializer_list>
 
+#ifndef CFXS_STATIC_SPI_CONSTEXPR
+    #ifndef DEBUG
+        #define CFXS_STATIC_SPI_CONSTEXPR constexpr
+    #else
+        #define CFXS_STATIC_SPI_CONSTEXPR
+    #endif
+#endif
+
 namespace CFXS::HW::TM4C {
 
     class SPI {
@@ -83,7 +91,7 @@ namespace CFXS::HW::TM4C {
     public:
         constexpr Static_SPI() = default;
 
-        constexpr void Initialize() const {
+        CFXS_STATIC_SPI_CONSTEXPR void Initialize() const {
             switch (PERIPH_INDEX) {
                 case 0: SystemControl::EnablePeripheral(0xF0001C00); break;
                 case 1: SystemControl::EnablePeripheral(0xF0001C01); break;
@@ -138,19 +146,27 @@ namespace CFXS::HW::TM4C {
         }
 
         /// @brief Enable SPI
-        constexpr void Enable() const { __mem32(GetBase() + SPI::BaseOffset::CR1) |= SPI::Register::CR1::SSE; }
+        CFXS_STATIC_SPI_CONSTEXPR void Enable() const {
+            __mem32(GetBase() + SPI::BaseOffset::CR1) |= SPI::Register::CR1::SSE;
+        }
 
         /// @brief Disable SPI
-        constexpr void Disable() const { __mem32(GetBase() + SPI::BaseOffset::CR1) &= ~SPI::Register::CR1::SSE; }
+        CFXS_STATIC_SPI_CONSTEXPR void Disable() const {
+            __mem32(GetBase() + SPI::BaseOffset::CR1) &= ~SPI::Register::CR1::SSE;
+        }
 
-        constexpr bool IsEnabled() const { return __mem32(GetBase() + SPI::BaseOffset::CR1) & SPI::Register::CR1::SSE; }
+        CFXS_STATIC_SPI_CONSTEXPR bool IsEnabled() const {
+            return __mem32(GetBase() + SPI::BaseOffset::CR1) & SPI::Register::CR1::SSE;
+        }
 
         /// @brief Set chipselect level
         /// @param state true = high
-        constexpr void SetCS(bool state) const { CS{}.Write(state); }
+        CFXS_STATIC_SPI_CONSTEXPR void SetCS(bool state) const {
+            CS{}.Write(state);
+        }
 
         /// @brief Read all data from RX FIFO
-        constexpr void Clear_RX_FIFO() const {
+        CFXS_STATIC_SPI_CONSTEXPR void Clear_RX_FIFO() const {
             uint32_t temp;
             while (NonBlockingRead(&temp)) {
             }
@@ -159,7 +175,7 @@ namespace CFXS::HW::TM4C {
         /// @brief Write data to SPI
         /// @param data data to write
         /// @param waitUntilTransmitted block until transfer finished
-        constexpr void Write(uint32_t data) const {
+        CFXS_STATIC_SPI_CONSTEXPR void Write(uint32_t data) const {
             while (Is_TX_FIFO_Full()) {
             }
 
@@ -170,7 +186,7 @@ namespace CFXS::HW::TM4C {
         /// @param data data array to write
         /// @param len number of bytes to write
         /// @param waitUntilTransmitted block until transfer finished
-        constexpr void Write(uint8_t* data, size_t len) const {
+        CFXS_STATIC_SPI_CONSTEXPR void Write(uint8_t* data, size_t len) const {
             for (size_t i = 0; i < len; i++) {
                 Write(data[i]);
             }
@@ -179,14 +195,14 @@ namespace CFXS::HW::TM4C {
         /// @brief Write multiple words to SPI interface, unrolled at compile time
         /// @param ...args words to write
         template<class... Args>
-        constexpr void WriteList(Args... args) {
+        CFXS_STATIC_SPI_CONSTEXPR void WriteList(Args... args) {
             _WriteList(
                 [this](auto arg) constexpr { Write(arg); }, args...);
         }
 
         /// @brief Read data from FIFO
         /// @param read write data to here
-        constexpr void Read(uint8_t* readTo) const {
+        CFXS_STATIC_SPI_CONSTEXPR void Read(uint8_t* readTo) const {
             while (Is_RX_FIFO_Empty()) {
             }
             *readTo = __mem32(GetBase() + SPI::BaseOffset::DR);
@@ -195,7 +211,7 @@ namespace CFXS::HW::TM4C {
         /// @brief Attempt to read data from FIFO
         /// @param read write data to here
         /// @return true if data read, false if no data was available
-        constexpr bool NonBlockingRead(uint32_t* read) const {
+        CFXS_STATIC_SPI_CONSTEXPR bool NonBlockingRead(uint32_t* read) const {
             if (__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::RNE) {
                 *read = __mem32(GetBase() + SPI::BaseOffset::DR);
                 return true;
@@ -206,18 +222,24 @@ namespace CFXS::HW::TM4C {
 
         /// @brief Check if SPI TX FIFO is full
         /// @return true if FIFO full
-        constexpr bool Is_TX_FIFO_Full() const { return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::TNF); }
+        CFXS_STATIC_SPI_CONSTEXPR bool Is_TX_FIFO_Full() const {
+            return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::TNF);
+        }
 
         /// @brief Check if SPI RX FIFO is empty
         /// @return true if empty
-        constexpr bool Is_RX_FIFO_Empty() const { return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::RNE); }
+        CFXS_STATIC_SPI_CONSTEXPR bool Is_RX_FIFO_Empty() const {
+            return !(__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::RNE);
+        }
 
         /// @brief Check if SPI busy (transfer in progress)
         /// @return true if busy
-        constexpr bool IsBusy() const { return (__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::BSY) ? true : false; }
+        CFXS_STATIC_SPI_CONSTEXPR bool IsBusy() const {
+            return (__mem32(GetBase() + SPI::BaseOffset::SR) & SPI::Register::SR::BSY) ? true : false;
+        }
 
         /// @brief Wait for transfer to finish
-        constexpr void WaitForTransferFinished() {
+        CFXS_STATIC_SPI_CONSTEXPR void WaitForTransferFinished() {
             while (IsBusy()) {
             }
         }
@@ -225,7 +247,7 @@ namespace CFXS::HW::TM4C {
     private:
         /// @brief Get SPI peripheral base address
         /// @return SPI peripheral base address
-        constexpr uint32_t GetBase() const {
+        CFXS_STATIC_SPI_CONSTEXPR uint32_t GetBase() const {
             switch (PERIPH_INDEX) {
                 case 0: return 0x40008000;
                 case 1: return 0x40009000;
@@ -238,13 +260,14 @@ namespace CFXS::HW::TM4C {
         // Write list unroll helpers
 
         template<class F, class First, class... Rest>
-        constexpr void _WriteList(F f, First first, Rest... rest) {
+        CFXS_STATIC_SPI_CONSTEXPR void _WriteList(F f, First first, Rest... rest) {
             f(first);
             _WriteList(f, rest...);
         }
 
         template<class F>
-        constexpr void _WriteList(F f) {}
+        CFXS_STATIC_SPI_CONSTEXPR void _WriteList(F f) {
+        }
     };
 
 } // namespace CFXS::HW::TM4C
