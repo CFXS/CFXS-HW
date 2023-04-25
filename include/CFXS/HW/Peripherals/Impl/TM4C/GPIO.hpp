@@ -139,29 +139,15 @@ namespace CFXS::HW::TM4C {
         }
     };
 
-    template<uint32_t BASE = 0, uint8_t PINS = 0, uint32_t SYSCTL = 0>
+    template<uint32_t BASE = 0, uint8_t PINS = 0, uint32_t SYSCTL_PERIPHERAL = 0>
     class Static_GPIO {
         static constexpr uint32_t PIN_ACCESS_MASK = PINS << 2;
 
     public:
         constexpr Static_GPIO() = default;
 
-        /// @brief Get GPIO port SystemControl address
-        /// @return GPIO port SystemControl address
-        constexpr uint32_t GetSystemControlAddress() const {
-            return SYSCTL;
-        }
-
-        /// @brief Get GPIO port register base address
-        /// @return GPIO port register base address
-        constexpr uint32_t GetBase() const {
-            return BASE;
-        }
-
-        /// @brief Get GPIO pins
-        /// @return GPIO pins
-        constexpr uint32_t GetPins() const {
-            return PINS;
+        constexpr void EnablePeripheral() {
+            SystemControl::EnablePeripheral(SYSCTL_PERIPHERAL);
         }
 
         /// @brief Set or clear configured pin mask to configured port
@@ -277,20 +263,18 @@ namespace CFXS::HW::TM4C {
             ConfigureAsInput();
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::ANALOG);
         }
+
+    private:
+        /// @brief Get GPIO port SystemControl address
+        /// @return GPIO port SystemControl address
+        constexpr uint32_t GetSystemControlAddress() const {
+            return SYSCTL_PERIPHERAL;
+        }
     };
 
     class Unimplemented_GPIO {
     public:
         constexpr Unimplemented_GPIO() = default;
-        constexpr uint32_t GetSystemControlAddress() const {
-            return 0;
-        }
-        constexpr uint32_t GetBase() const {
-            return 0;
-        }
-        constexpr uint32_t GetPins() const {
-            return 0;
-        }
         constexpr void Write(bool s) const {
         }
         constexpr void DirectWrite(uint32_t mask) const {

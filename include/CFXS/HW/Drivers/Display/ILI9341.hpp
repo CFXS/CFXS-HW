@@ -74,18 +74,8 @@ namespace CFXS::HW {
         };
     };
 
-    template<typename PIN_DATA,
-             typename PIN_RS,
-             typename PIN_WR,
-             typename PIN_RESET,
-             uint16_t W,
-             uint16_t H,
-             uint16_t X_PANEL_OFFSET = 0,
-             uint16_t Y_PANEL_OFFSET = 0>
+    template<typename PIN_DATA, typename PIN_RS, typename PIN_WR, typename PIN_RESET>
     struct Interface_ILI9341_Parallel {
-        static constexpr uint16_t WIDTH  = W;
-        static constexpr uint16_t HEIGHT = H;
-
         constexpr void Initialize([[maybe_unused]] size_t clock_speed = 0) {
             PIN_DATA{}.ConfigureAsOutput();
             PIN_RS{}.ConfigureAsOutput();
@@ -116,8 +106,6 @@ namespace CFXS::HW {
             // 65K 16bit
             SendCommand(_ILI9341_Base::Command::PIXEL_FORMAT_SET);
             SendData(0b01010101);
-
-            SendCommand(_ILI9341_Base::Command::DISPLAY_ON);
         }
 
         constexpr void SendCommand(_ILI9341_Base::Command command) {
@@ -148,58 +136,71 @@ namespace CFXS::HW {
             PIN_WR{}.Write(false);
             PIN_WR{}.Write(true);
         }
-
-        constexpr void SetRegion(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-            x += X_PANEL_OFFSET;
-            y += Y_PANEL_OFFSET;
-            SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
-            SendData16(x);
-            x += w - 1;
-            SendData16(x);
-            SendCommand(_ILI9341_Base::Command::COLUMN_ADDRESS_SET);
-            SendData16(y);
-            y += h - 1;
-            SendData16(y);
-            SendCommand(_ILI9341_Base::Command::MEMORY_WRITE);
-        }
-
-        constexpr void ClearColorRegion16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
-            SetRegion(x, y, w, h);
-            for (int i = 0; i < w * h; i++) {
-                SendData16(color);
-            }
-        }
-
-        constexpr void SendColorRegion16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t* color_data) {
-        }
     };
 
-    template<typename INTERFACE>
+    template<typename INTERFACE, uint16_t W, uint16_t H, uint16_t X_PANEL_OFFSET = 0, uint16_t Y_PANEL_OFFSET = 0>
     class ILI9341 {
     public:
         using Base = _ILI9341_Base;
 
-        static constexpr uint16_t BASE_WIDTH  = INTERFACE::WIDTH;
-        static constexpr uint16_t BASE_HEIGHT = INTERFACE::HEIGHT;
+        static constexpr uint16_t BASE_WIDTH  = W;
+        static constexpr uint16_t BASE_HEIGHT = H;
 
     public:
-        static void Initialize(uint32_t clock_speed = 0) {
+        constexpr void Initialize(uint32_t clock_speed = 0) {
             INTERFACE{}.Initialize(clock_speed);
         }
 
-        static void SendFrame16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t* color_data) {
-            INTERFACE{}.SendColorRegion16(x, y, w, h, color_data);
+        constexpr void SetDisplayEnabled(bool enabled) {
+            INTERFACE{}.SendCommand(enabled ? _ILI9341_Base::Command::DISPLAY_ON : _ILI9341_Base::Command::DISPLAY_OFF);
         }
 
-        static void ClearFrame16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
-            INTERFACE{}.ClearColorRegion16(x, y, w, h, color);
+        constexpr void SetRegion(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+            x += X_PANEL_OFFSET;
+            y += Y_PANEL_OFFSET;
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
+            INTERFACE{}.SendData16(x);
+            x += w - 1;
+            INTERFACE{}.SendData16(x);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::COLUMN_ADDRESS_SET);
+            INTERFACE{}.SendData16(y);
+            y += h - 1;
+            INTERFACE{}.SendData16(y);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::MEMORY_WRITE);
         }
 
-        static void SetOrientation(bool swap_xy,
-                                   bool flip_x,
-                                   bool flip_y,
-                                   bool refresh_left_to_right = true,
-                                   bool refresh_top_to_bottom = true) {
+        constexpr void ClearFrame16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
+            SetRegion(x, y, w, h);
+            for (int i = 0; i < w * h; i++) {
+                INTERFACE{}.SendData16(color);
+            }
+        }
+
+        constexpr void SendFrame16(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t* color_data) {
+            SetRegion(x, y, w, h);
+            for (int i = 0; i < w * h; i++) {
+                INTERFACE{}.SendData16(*color_data++);
+            }
+        }
+
+        constexpr void SendPixel16(uint16_t x, uint16_t y, uint16_t color) {
+            x += X_PANEL_OFFSET;
+            y += Y_PANEL_OFFSET;
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
+            INTERFACE{}.SendData16(x);
+            INTERFACE{}.SendData16(x);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::COLUMN_ADDRESS_SET);
+            INTERFACE{}.SendData16(y);
+            INTERFACE{}.SendData16(y);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::MEMORY_WRITE);
+            INTERFACE{}.SendData16(color);
+        }
+
+        constexpr void SetOrientation(bool swap_xy,
+                                      bool flip_x,
+                                      bool flip_y,
+                                      bool refresh_left_to_right = true,
+                                      bool refresh_top_to_bottom = true) {
             INTERFACE{}.SendCommand(_ILI9341_Base::Command::MEMORY_ACCESS_CONTROL);
             INTERFACE{}.SendData((flip_y ? 0x80 : 0) |                // BOTTOM TO TOP
                                  (flip_x ? 0x40 : 0) |                // RIGHT TO LEFT
@@ -210,18 +211,18 @@ namespace CFXS::HW {
                                  0);
         }
 
-        static void SetFrameRate(_ILI9341_Base::FrameRate rate) {
+        constexpr void SetFrameRate(_ILI9341_Base::FrameRate rate) {
         }
 
-        static void Enable_VSYNC_Output(uint16_t scanline) {
+        constexpr void Enable_VSYNC_Output(uint16_t scanline) {
         }
 
         static uint16_t GetWidth() {
-            return INTERFACE::WIDTH;
+            return BASE_WIDTH;
         }
 
         static uint16_t GetHeight() {
-            return INTERFACE::HEIGHT;
+            return BASE_HEIGHT;
         }
     };
 
