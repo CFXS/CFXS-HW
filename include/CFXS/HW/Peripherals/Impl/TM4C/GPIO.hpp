@@ -10,6 +10,14 @@
 
 #define DEF_UNIMPLEMENTED_GPIO_TM4C(str) CFXS::HW::TM4C::Unimplemented_GPIO
 
+#ifndef CFXS_STATIC_GPIO_CONSTEXPR
+    #ifndef DEBUG
+        #define CFXS_STATIC_GPIO_CONSTEXPR constexpr
+    #else
+        #define CFXS_STATIC_GPIO_CONSTEXPR
+    #endif
+#endif
+
 namespace CFXS::HW::TM4C {
 
     class GPIO {
@@ -152,7 +160,7 @@ namespace CFXS::HW::TM4C {
 
         /// @brief Set or clear configured pin mask to configured port
         /// @param s true = set, false = clear
-        constexpr void Write(bool s) const {
+        CFXS_STATIC_GPIO_CONSTEXPR void Write(bool s) const {
             if (s) {
                 __mem32(BASE + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = PINS;
             } else {
@@ -162,7 +170,7 @@ namespace CFXS::HW::TM4C {
 
         /// @brief Write pin mask to configured port
         /// @param val
-        constexpr void DirectWrite(uint32_t mask) const {
+        CFXS_STATIC_GPIO_CONSTEXPR void DirectWrite(uint32_t mask) const {
             // TODO: check if 8bit access is faster than 32bit
             __mem32(BASE + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = mask;
         }
@@ -170,21 +178,21 @@ namespace CFXS::HW::TM4C {
         /// @brief Write pin mask to configured port to -SHIFT shifted base
         /// @param val
         template<size_t SHIFT>
-        constexpr void DirectWrite_SHIFTED_BASE(uint32_t mask) const {
+        CFXS_STATIC_GPIO_CONSTEXPR void DirectWrite_SHIFTED_BASE(uint32_t mask) const {
             // TODO: check if 8bit access is faster than 32bit
             __mem32((BASE - SHIFT) + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = mask;
         }
 
         /// @brief Write pin mask to configured port to -SHIFT shifted base
         /// @param val
-        constexpr void DirectWrite_SHIFTED_BASE(uint32_t mask) const {
+        CFXS_STATIC_GPIO_CONSTEXPR void DirectWrite_SHIFTED_BASE(uint32_t mask) const {
             // TODO: check if 8bit access is faster than 32bit
             __mem32((BASE - 1) + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK) = mask;
         }
 
         /// @brief Read configured GPIO port with pin mask
         /// @return GPIO port reading
-        constexpr uint32_t DirectRead() const {
+        CFXS_STATIC_GPIO_CONSTEXPR uint32_t DirectRead() const {
             // TODO: check if 8bit access is faster than 32bit
             return __mem32(BASE + GPIO::BaseOffset::DATA + PIN_ACCESS_MASK);
         }
@@ -238,28 +246,28 @@ namespace CFXS::HW::TM4C {
         }
 
         /// @brief Configure pins as inputs
-        constexpr void ConfigureAsInput() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsInput() const {
             __mem32(BASE + GPIO::BaseOffset::DIR) &= ~PINS;   // in
             __mem32(BASE + GPIO::BaseOffset::AFSEL) &= ~PINS; // i/o
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::STD);
         }
 
         /// @brief Configure pins as outputs
-        constexpr void ConfigureAsOutput() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsOutput() const {
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::STD);
             __mem32(BASE + GPIO::BaseOffset::DIR) |= PINS;    // out
             __mem32(BASE + GPIO::BaseOffset::AFSEL) &= ~PINS; // i/o
         }
 
         /// @brief Configure pins to be hardware/peripheral controlled
-        constexpr void ConfigureAsHardware() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsHardware() const {
             __mem32(BASE + GPIO::BaseOffset::DIR)   = __mem32(BASE + GPIO::BaseOffset::DIR) & ~PINS;
             __mem32(BASE + GPIO::BaseOffset::AFSEL) = __mem32(BASE + GPIO::BaseOffset::AFSEL) | PINS;
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::STD);
         }
 
         /// @brief Configure pins to be hardware/peripheral controlled
-        constexpr void ConfigureAsAnalog() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsAnalog() const {
             ConfigureAsInput();
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::ANALOG);
         }
@@ -274,24 +282,24 @@ namespace CFXS::HW::TM4C {
 
     class Unimplemented_GPIO {
     public:
-        constexpr Unimplemented_GPIO() = default;
-        constexpr void Write(bool s) const {
+        CFXS_STATIC_GPIO_CONSTEXPR Unimplemented_GPIO() = default;
+        CFXS_STATIC_GPIO_CONSTEXPR void Write(bool s) const {
         }
-        constexpr void DirectWrite(uint32_t mask) const {
+        CFXS_STATIC_GPIO_CONSTEXPR void DirectWrite(uint32_t mask) const {
         }
-        constexpr uint32_t DirectRead() const {
+        CFXS_STATIC_GPIO_CONSTEXPR uint32_t DirectRead() const {
             return 0;
         }
-        constexpr void SetConfig(uint32_t drive_strength, uint32_t pin_type) const {
+        CFXS_STATIC_GPIO_CONSTEXPR void SetConfig(uint32_t drive_strength, uint32_t pin_type) const {
         }
-        constexpr void ConfigureAsInput() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsInput() const {
         }
-        constexpr void ConfigureAsOutput() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsOutput() const {
         }
-        constexpr void ConfigureAsHardware() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsHardware() const {
         }
-        constexpr void ConfigureAsAnalog() const {
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsAnalog() const {
         }
-    };
+    }; // namespace CFXS::HW::TM4C
 
 } // namespace CFXS::HW::TM4C
