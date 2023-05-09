@@ -106,7 +106,7 @@ namespace CFXS::HW {
 
     /// Write data to GPIO
     void GPIO::Write(bool data) {
-        HWREGB(_descriptor->accessAddress) = data ? 0xFFFFFFFF : 0; //
+        HWREGB(_descriptor->accessAddress) = data ? 0xFF : 0; //
     }
 
 } // namespace CFXS::HW
