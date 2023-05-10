@@ -86,6 +86,10 @@ if(${CFXS_HW_MODULE_ETHERNET})
     <lwip/snmp.h>
     <lwip/tcpip.h>
     <netif/etharp.h>
+    <inc/hw_types.h>
+    <driverlib/debug.h>
+    <driverlib/sysctl.h>
+    <inc/hw_nvic.h>
   )
 endif()
 

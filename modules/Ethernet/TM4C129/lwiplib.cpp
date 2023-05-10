@@ -3,16 +3,13 @@
 #include "lwip/priv/raw_priv.h"
 #include "lwip/priv/mem_priv.h"
 #include "lwiplib.h"
-#include "inc/hw_types.h"
 #include "netif/etharp.h"
 #include "lwip/igmp.h"
 #include "lwip/init.h"
 #include "lwip/ip4_frag.h"
 #include "lwip/ip_addr.h"
-#include <driverlib/debug.h>
-#include <driverlib/sysctl.h>
-#include <inc/hw_types.h>
-#include <inc/hw_nvic.h>
+#include "lwip/dhcp.h"
+#include "defs.hpp"
 
 //*****************************************************************************
 //
@@ -381,14 +378,14 @@ static void lwIPInterruptTask(void *pvArg) {
 #if LWIP_AUTOIP || LWIP_DHCP
 static void lwIPLinkDetect(void) {
     bool bHaveLink;
-    struct ip_addr ip_addr;
-    struct ip_addr net_mask;
-    struct ip_addr gw_addr;
+    struct ip4_addr ip_addr;
+    struct ip4_addr net_mask;
+    struct ip4_addr gw_addr;
 
     //
     // See if there is an active link.
     //
-    bHaveLink = MAP_EMACPHYRead(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMSR) & EPHY_BMSR_LINKSTAT;
+    bHaveLink = EMACPHYRead(EMAC0_BASE, CFXS_HW_ETHERNET_PHY_ADDRESS, EPHY_BMSR) & EPHY_BMSR_LINKSTAT;
 
     //
     // Return without doing anything else if the link state hasn't changed.
@@ -610,7 +607,7 @@ static void lwIPPrivateLinkTimer(void *pvArg) {
 // RTOS.
 //
 //*****************************************************************************
-extern void __cfxs_ethernet_lwip_network_interface_init(struct netif *netif);
+extern err_t __cfxs_ethernet_lwip_network_interface_init(struct netif *netif);
 static void lwIPPrivateInit(void *pvArg) {
     struct ip4_addr ip_addr;
     struct ip4_addr net_mask;
@@ -662,9 +659,9 @@ static void lwIPPrivateInit(void *pvArg) {
     // packets to the TCP/IP thread's queue when using a RTOS.
     //
 #if NO_SYS
-    netif_add(&e_Main_Network_Interface, &ip_addr, &net_mask, &gw_addr, NULL, __cfxs_ethernet_lwip_network_interface_init, ip_input);
+    netif_add(&e_Main_Network_Interface, &ip_addr, &net_mask, &gw_addr, nullptr, __cfxs_ethernet_lwip_network_interface_init, ip_input);
 #else
-    netif_add(&e_Main_Network_Interface, &ip_addr, &net_mask, &gw_addr, NULL, tivaif_init, tcpip_input);
+    netif_add(&e_Main_Network_Interface, &ip_addr, &net_mask, &gw_addr, nullptr, tivaif_init, tcpip_input);
 #endif
     netif_set_default(&e_Main_Network_Interface);
 

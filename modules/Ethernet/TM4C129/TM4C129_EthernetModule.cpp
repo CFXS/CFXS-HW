@@ -7,6 +7,7 @@
 #include <CFXS/Base/Memory.hpp>
 #include <CFXS/Base/Time.hpp>
 #include <CFXS/Base/IPv4.hpp>
+#include "defs.hpp"
 
 extern "C" {
 extern void lwIPTimer(uint32_t period);
@@ -28,22 +29,6 @@ uint32_t s_Ethernet_DataRate_RX        = 0;
 
 using CFXS::DebugLevel;
 using CFXS::HW::TM4C::SystemControl;
-
-#ifndef CFXS_HW_ETHERNET_PHY_ADDRESS
-    #ifdef CFXS_HW_ETHERNET_INTERNAL_PHY
-        #define CFXS_HW_ETHERNET_PHY_ADDRESS 0
-    #else
-        #define CFXS_HW_ETHERNET_PHY_ADDRESS 1
-    #endif
-#endif
-
-#ifndef CFXS_HW_ETHERNET_TX_DESCRIPTOR_COUNT
-    #define CFXS_HW_ETHERNET_TX_DESCRIPTOR_COUNT 16
-#endif
-
-#ifndef CFXS_HW_ETHERNET_RX_DESCRIPTOR_COUNT
-    #define CFXS_HW_ETHERNET_RX_DESCRIPTOR_COUNT 24
-#endif
 
 ////////////////////////////////////////////////////////////
 
@@ -149,15 +134,15 @@ EthernetHeapStatus s_EthernetHeapStats;
 extern CFXS::Heap s_MainHeap;
 
 __c_func void __cfxs_eth_free(void *data) {
-    // s_EthernetHeapStats.free_count++;
+    s_EthernetHeapStats.free_count++;
     s_MainHeap.Deallocate(data);
 }
 __c_func void *__cfxs_eth_malloc(size_t size) {
-    // s_EthernetHeapStats.alloc_count++;
+    s_EthernetHeapStats.alloc_count++;
     return s_MainHeap.Allocate(size);
 }
 __c_func void *__cfxs_eth_calloc(size_t nitems, size_t size) {
-    // s_EthernetHeapStats.alloc_count++;
+    s_EthernetHeapStats.alloc_count++;
     return s_MainHeap.AllocateAndZero(nitems * size);
 }
 
@@ -602,7 +587,7 @@ static err_t ethernet_transmit(struct netif *psNetif, struct pbuf *p) {
     return (ERR_OK);
 }
 
-void __cfxs_ethernet_lwip_network_interface_init(struct netif *interface) {
+err_t __cfxs_ethernet_lwip_network_interface_init(struct netif *interface) {
 #if LWIP_NETIF_HOSTNAME
     interface->hostname = "lwip";
 #endif /* LWIP_NETIF_HOSTNAME */
@@ -614,6 +599,8 @@ void __cfxs_ethernet_lwip_network_interface_init(struct netif *interface) {
     interface->output     = etharp_output;
     interface->linkoutput = ethernet_transmit;
     interface->mtu        = 1500;
+
+    return ERR_OK;
 }
 
 void __cfxs_initialize_module_Ethernet(const CFXS::MAC_Address &default_mac) {
