@@ -69,7 +69,24 @@ if(${CFXS_HW_MODULE_ETHERNET})
   endif()
 
   set(ETH_INCLUDE_DIR_PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/modules/Ethernet")
-  set(ETH_PRIVATE_PRECOMPILE_HEADERS <driverlib/emac.h> <inc/hw_emac.h> <inc/hw_memmap.h>)
+  set(ETH_PRIVATE_PRECOMPILE_HEADERS
+    <driverlib/emac.h>
+    <driverlib/rom.h>
+    <driverlib/interrupt.h>
+    <inc/hw_ints.h>
+    <lwip/pbuf.h>
+    <inc/hw_emac.h>
+    <inc/hw_memmap.h>
+    <lwip/opt.h>
+    <lwip/def.h>
+    <lwip/mem.h>
+    <lwip/pbuf.h>
+    <lwip/sys.h>
+    <lwip/stats.h>
+    <lwip/snmp.h>
+    <lwip/tcpip.h>
+    <netif/etharp.h>
+  )
 endif()
 
 set_source_files_properties(${sources} PROPERTIES LANGUAGE CXX)
@@ -92,3 +109,8 @@ target_precompile_headers(
   <string.h>
   ${ETH_PRIVATE_PRECOMPILE_HEADERS}
 )
+
+if(${CFXS_HW_MODULE_ETHERNET})
+  target_link_libraries(CFXS_HW PUBLIC lwip)
+  target_include_directories(lwip PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/modules/Ethernet/Common/lwip")
+endif()
