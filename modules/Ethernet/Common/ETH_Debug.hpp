@@ -7,5 +7,5 @@ namespace CFXS::Ethernet {
 
 #define CFXS_ETH_printf(level, ...)                       \
     if constexpr (level >= CFXS::Ethernet::DEBUG_LEVEL) { \
-        CFXS_printf("CFXS::Ethernet| " __VA_ARGS__);      \
+        CFXS_printf("CFXS::Ethernet> " __VA_ARGS__);      \
     }

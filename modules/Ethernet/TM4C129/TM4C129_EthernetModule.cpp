@@ -7,10 +7,10 @@
 #include <CFXS/Base/Memory.hpp>
 #include <CFXS/Base/Time.hpp>
 #include <CFXS/Base/IPv4.hpp>
-#include "defs.hpp"
+#include "_defines.hpp"
 
 extern "C" {
-extern void lwIPTimer(uint32_t period);
+extern void lwIPTimer(void *);
 
 extern void lwIPInit(uint32_t ui32SysClkHz,
                      const uint8_t *pui8MAC,
@@ -32,22 +32,21 @@ using CFXS::HW::TM4C::SystemControl;
 
 ////////////////////////////////////////////////////////////
 
-static bool s_Eth_InterruptsEnabled = false;
-static int s_Eth_IntNestLevel       = 0;
+static int s_Eth_ProtectLevel = 1;
 
 __c_func uint32_t sys_now() {
     return CFXS::Time::ms;
 }
 
 __c_func sys_prot_t sys_arch_protect() {
-    s_Eth_InterruptsEnabled = CFXS::CPU::AreInterruptsEnabled();
-    CFXS::CPU::DisableInterrupts();
-    s_Eth_IntNestLevel++;
-    return s_Eth_InterruptsEnabled;
+    if (s_Eth_ProtectLevel == 0)
+        CFXS::CPU::DisableInterrupts();
+    s_Eth_ProtectLevel++;
+    return s_Eth_ProtectLevel;
 }
 __c_func void sys_arch_unprotect(sys_prot_t level) {
-    s_Eth_IntNestLevel--;
-    if (s_Eth_InterruptsEnabled && s_Eth_IntNestLevel == 0)
+    s_Eth_ProtectLevel--;
+    if (s_Eth_ProtectLevel == 0)
         CFXS::CPU::EnableInterrupts();
 }
 
@@ -364,9 +363,11 @@ void interrupt_Ethernet() {
         status &= ~(EMAC_INT_POWER_MGMNT);
     }
 
-    if (status) {
-        EMACIntClear(EMAC0_BASE, status);
+    if (status == 0) {
+        return;
     }
+
+    EMACIntClear(EMAC0_BASE, status);
 
     // if (status & EMAC_INT_TIMESTAMP) {
     //     //
@@ -383,9 +384,7 @@ void interrupt_Ethernet() {
     // }
 
 #if NO_SYS
-    if (status) {
-        Process_Ethernet_Interrupt(status);
-    }
+    Process_Ethernet_Interrupt(status);
 #else
     xQueueSendFromISR(g_pInterrupt, (void *)&ui32Status, &xWake);
     MAP_EMACIntDisable(
@@ -587,6 +586,35 @@ static err_t ethernet_transmit(struct netif *psNetif, struct pbuf *p) {
     return (ERR_OK);
 }
 
+#ifdef CFXS_HW_ETHERNET_INTERRUPT_MODE
+void InitializeInterruptMode() {
+    #ifdef CFXS_HW_ETHERNET_INTERRUPT_PRIORITY
+        #if (CFXS_HW_ETHERNET_PRIORITY >= 0) && ((CFXS_HW_ETHERNET_INTERRUPT_PRIORITY & (~__NVIC_PRIO_BITS)) == 0)
+    ROM_IntPrioritySet(INT_EMAC0, CFXS_HW_ETHERNET_INTERRUPT_PRIORITY << 5);
+        #else
+            #error Ethernet interrupt priority out of range
+        #endif
+    #else
+        #error Ethernet interrupt priority not defined
+    #endif
+    IntRegister(INT_EMAC0, interrupt_Ethernet);
+    ROM_IntEnable(INT_EMAC0);
+}
+#endif
+
+#ifdef CFXS_HW_ETHERNET_POLL_MODE
+void InitializePollingMode() {
+    CFXS::Task::Create(
+        HIGH_PRIORITY,
+        "Ethernet Poll Task",
+        [](auto...) {
+            interrupt_Ethernet();
+        },
+        0)
+        ->Start();
+}
+#endif
+
 err_t __cfxs_ethernet_lwip_network_interface_init(struct netif *interface) {
 #if LWIP_NETIF_HOSTNAME
     interface->hostname = "lwip";
@@ -599,11 +627,12 @@ err_t __cfxs_ethernet_lwip_network_interface_init(struct netif *interface) {
     interface->output     = etharp_output;
     interface->linkoutput = ethernet_transmit;
     interface->mtu        = 1500;
+    interface->flags |= NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
 
     return ERR_OK;
 }
 
-void __cfxs_initialize_module_Ethernet(const CFXS::MAC_Address &default_mac) {
+void __cfxs_module_Ethernet_Initialize(const CFXS::MAC_Address &default_mac) {
     CFXS_ETH_printf(DebugLevel::INFO, "Initialize module (TM4C129)\n");
 
     char buf[32];
@@ -620,13 +649,22 @@ void __cfxs_initialize_module_Ethernet(const CFXS::MAC_Address &default_mac) {
     SystemControl::EnablePeripheral(SystemControl::Peripheral::EPHY0);
 #endif
 
-    //
+//
 // Configure for use with whichever PHY the user requires.
 //
 #if CFXS_HW_ETHERNET_INTERNAL_PHY
+    CFXS_ETH_printf(DebugLevel::TRACE, "Configure internal PHY\n");
     ROM_EMACPHYConfigSet(EMAC0_BASE, (EMAC_PHY_TYPE_INTERNAL | EMAC_PHY_INT_MDIX_EN | EMAC_PHY_AN_100B_T_FULL_DUPLEX));
 #else
-    #error implement external phy config
+    #if defined(CFXS_HW_ETHERNET_PHY_INTERFACE_MII)
+    CFXS_ETH_printf(DebugLevel::TRACE, "Configure external MII PHY\n");
+    ROM_EMACPHYConfigSet(EMAC0_BASE, (EMAC_PHY_TYPE_EXTERNAL_MII | EMAC_PHY_INT_MDIX_EN | EMAC_PHY_AN_100B_T_FULL_DUPLEX));
+    #elif defined(CFXS_HW_ETHERNET_PHY_INTERFACE_RMII)
+    CFXS_ETH_printf(DebugLevel::TRACE, "Configure external RMII PHY\n");
+    ROM_EMACPHYConfigSet(EMAC0_BASE, (EMAC_PHY_TYPE_EXTERNAL_RMII | EMAC_PHY_INT_MDIX_EN | EMAC_PHY_AN_100B_T_FULL_DUPLEX));
+    #else
+        #error External PHY type not defined (CFXS_HW_ETHERNET_PHY_INTERFACE_MII/CFXS_HW_ETHERNET_PHY_INTERFACE_RMII)
+    #endif
 #endif
 
     //
@@ -690,39 +728,23 @@ void __cfxs_initialize_module_Ethernet(const CFXS::MAC_Address &default_mac) {
         EMAC0_BASE,
         (EMAC_INT_RECEIVE | EMAC_INT_TRANSMIT | EMAC_INT_TX_STOPPED | EMAC_INT_RX_NO_BUFFER | EMAC_INT_RX_STOPPED | EMAC_INT_PHY));
 
-    /* Enable the Ethernet interrupt. */
-    ROM_IntEnable(INT_EMAC0);
+/* Enable all processor interrupts. */
+//IntMasterEnable(); //TODO(KRISTS): MODOFIED BY ME because wtf does lwip have to do with interrupts?
 
-    /* Enable all processor interrupts. */
-    //IntMasterEnable(); //TODO(KRISTS): MODOFIED BY ME because wtf does lwip have to do with interrupts?
-
-    /* Tell the PHY to start an auto-negotiation cycle. */
+/* Tell the PHY to start an auto-negotiation cycle. */
 #ifdef CFXS_HW_ETHERNET_EXTERNAL_PHY
     ROM_EMACPHYWrite(EMAC0_BASE, PHY_PHYS_ADDR, EPHY_BMCR, (EPHY_BMCR_SPEED | EPHY_BMCR_DUPLEXM | EPHY_BMCR_ANEN | EPHY_BMCR_RESTARTAN));
 #else
     ROM_EMACPHYWrite(EMAC0_BASE, CFXS_HW_ETHERNET_PHY_ADDRESS, EPHY_BMCR, (EPHY_BMCR_ANEN | EPHY_BMCR_RESTARTAN));
 #endif
 
-    ROM_IntPrioritySet(INT_EMAC0, 2 << 5);
-    IntRegister(INT_EMAC0, interrupt_Ethernet);
-
-    auto network_process_task = CFXS::Task::Create(
-        HIGH_PRIORITY,
-        "Network",
-        [](auto...) {
-            static int idx = 0;
-            lwIPTimer(100);
-            idx++;
-            if (idx == 10) {
-                s_Ethernet_DataRate_TX        = s_Ethernet_DataRateCounter_TX;
-                s_Ethernet_DataRateCounter_TX = 0;
-                s_Ethernet_DataRate_RX        = s_Ethernet_DataRateCounter_RX;
-                s_Ethernet_DataRateCounter_RX = 0;
-                idx                           = 0;
-            }
-        },
-        100);
-    network_process_task->Start();
+#if defined(CFXS_HW_ETHERNET_INTERRUPT_MODE)
+    InitializeInterruptMode();
+#elif defined(CFXS_HW_ETHERNET_POLL_MODE)
+    InitializePollingMode();
+#else
+    #error Ethernet mode not defined (CFXS_HW_ETHERNET_INTERRUPT_MODE/CFXS_HW_ETHERNET_POLL_MODE)
+#endif
 
     lwIPInit(CFXS::CPU::CLOCK_FREQUENCY,
              default_mac.GetRawData(),
@@ -730,4 +752,20 @@ void __cfxs_initialize_module_Ethernet(const CFXS::MAC_Address &default_mac) {
              CFXS::IPv4{255, 0, 0, 0}.ToNetworkOrder(),
              CFXS::IPv4{255, 255, 255, 255}.ToNetworkOrder(),
              0);
+
+    CFXS::Task::Create(HIGH_PRIORITY, "lwIP Timer", lwIPTimer, 100)->Start();
+
+    CFXS::Task::Create(
+        LOW_PRIORITY,
+        "Network Rate",
+        [](auto...) {
+            s_Ethernet_DataRate_TX        = s_Ethernet_DataRateCounter_TX;
+            s_Ethernet_DataRateCounter_TX = 0;
+            s_Ethernet_DataRate_RX        = s_Ethernet_DataRateCounter_RX;
+            s_Ethernet_DataRateCounter_RX = 0;
+        },
+        100)
+        ->Start();
+
+    s_Eth_ProtectLevel--;
 }

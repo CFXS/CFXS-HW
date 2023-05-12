@@ -14,7 +14,11 @@ if(${CFXS_HW_MODULE_ETHERNET})
   message("[CFXS Hardware] Ethernet module enabled")
 
   if(NOT DEFINED CFXS_HW_MODULE_ETHERNET_PHY_TYPE)
-    message(FATAL_ERROR "PHY type not set [INTERNAL/EXTERNAL]")
+    message(FATAL_ERROR "PHY type not set (CFXS_HW_MODULE_ETHERNET_PHY_TYPE) [INTERNAL/EXTERNAL]")
+  endif()
+
+  if(NOT DEFINED CFXS_HW_MODULE_ETHERNET_MODE)
+    message(FATAL_ERROR "Ethernet mode not set (CFXS_HW_MODULE_ETHERNET_MODE) [INTERRUPT/POLL]")
   endif()
 
   if("${CFXS_HW_MODULE_ETHERNET_PHY_TYPE}" STREQUAL "INTERNAL")
@@ -25,7 +29,28 @@ if(${CFXS_HW_MODULE_ETHERNET})
     message(FATAL_ERROR "Invalid PHY type: ${CFXS_HW_MODULE_ETHERNET_PHY_TYPE} != [INTERNAL/EXTERNAL]")
   endif()
 
+  if("${CFXS_HW_MODULE_ETHERNET_MODE}" STREQUAL "INTERRUPT")
+    add_compile_definitions("CFXS_HW_ETHERNET_INTERRUPT_MODE")
+
+    if(NOT DEFINED CFXS_HW_MODULE_ETHERNET_INTERRUPT_PRIORITY)
+      message(FATAL_ERROR "Interrupt priority not set (CFXS_HW_MODULE_ETHERNET_INTERRUPT_PRIORITY)")
+    endif()
+
+    add_compile_definitions("CFXS_HW_ETHERNET_INTERRUPT_PRIORITY=${CFXS_HW_MODULE_ETHERNET_INTERRUPT_PRIORITY}")
+
+  elseif("${CFXS_HW_MODULE_ETHERNET_MODE}" STREQUAL "POLL")
+    add_compile_definitions("CFXS_HW_ETHERNET_POLL_MODE")
+  else()
+    message(FATAL_ERROR "Invalid ethernet mode: ${CFXS_HW_MODULE_ETHERNET_MODE} != [INTERRUPT/POLL]")
+  endif()
+
   message(" - ${CFXS_HW_MODULE_ETHERNET_PHY_TYPE} PHY")
+
+  if("${CFXS_HW_MODULE_ETHERNET_MODE}" STREQUAL "INTERRUPT")
+    message(" - ${CFXS_HW_MODULE_ETHERNET_MODE} Mode [Priority ${CFXS_HW_MODULE_ETHERNET_INTERRUPT_PRIORITY}]")
+  else()
+    message(" - ${CFXS_HW_MODULE_ETHERNET_MODE} Mode")
+  endif()
 
   file(GLOB_RECURSE eth_common_sources CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/modules/Ethernet/Common/*.c"

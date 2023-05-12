@@ -102,7 +102,7 @@ extern void lwIPInit(uint32_t ui32SysClkHz,
                      uint32_t ui32GWAddr,
                      uint32_t ui32IPMode);
 extern void lwIPTimerCallbackRegister(tHardwareTimerHandler pfnTimerFunc);
-extern void lwIPTimer(uint32_t ui32TimeMS);
+extern void lwIPTimer(void *);
 extern void lwIPEthernetIntHandler(void);
 extern uint32_t lwIPLocalIPAddrGet(void);
 extern uint32_t lwIPLocalNetMaskGet(void);

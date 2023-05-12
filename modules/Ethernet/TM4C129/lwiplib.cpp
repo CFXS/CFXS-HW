@@ -9,7 +9,7 @@
 #include "lwip/ip4_frag.h"
 #include "lwip/ip_addr.h"
 #include "lwip/dhcp.h"
-#include "defs.hpp"
+#include "_defines.hpp"
 
 //*****************************************************************************
 //
@@ -789,11 +789,14 @@ void lwIPTimerCallbackRegister(tHardwareTimerHandler pfnTimerFunc) {
 //
 //*****************************************************************************
 #if NO_SYS
-void lwIPTimer(uint32_t ui32TimeMS) {
+    #include <CFXS/Base/Time.hpp>
+CFXS::Time_t s_LWIPLIB_TimerLastCall = 0;
+void lwIPTimer(void *) {
     //
     // Increment the lwIP Ethernet timer.
     //
-    g_ui32LocalTimer += ui32TimeMS;
+    g_ui32LocalTimer += CFXS::Time::ms - s_LWIPLIB_TimerLastCall;
+    s_LWIPLIB_TimerLastCall = CFXS::Time::ms;
 
     //
     // Generate an Ethernet interrupt.  This will perform the actual work
