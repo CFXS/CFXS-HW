@@ -153,7 +153,7 @@ namespace CFXS::HW::TM4C {
         /// @brief Enable peripheral
         /// @param periph Peripheral SystemControl address
         /// @param waitForReady Block until peripheral ready after enabling
-        static void EnablePeripheral(uint32_t periph, bool waitForReady = true) {
+        static __noinline void EnablePeripheral(uint32_t periph, bool waitForReady = true) {
             if (!IsPeripheralEnabled(periph))
                 __LOCALDEF_HWREGBITW(Register::RCGCBASE + ((periph & 0xff00) >> 8), periph & 0xff) = 1;
             if (waitForReady)

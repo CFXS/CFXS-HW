@@ -132,6 +132,51 @@ namespace CFXS::HW::TM4C {
                 routes...);
         }
 
+        static __noinline void __SetConfig(uint32_t drive_strength, uint32_t pin_type, uint32_t BASE, uint32_t PINS) {
+            // Set GPIO peripheral configuration register first as required
+            for (uint8_t ui8Bit = 0; ui8Bit < 8; ui8Bit++) {
+                if (PINS & (1 << ui8Bit)) {
+                    __mem32(BASE + GPIO::BaseOffset::PC) = (__mem32(BASE + GPIO::BaseOffset::PC) & ~(0x3 << (2 * ui8Bit)));
+                    __mem32(BASE + GPIO::BaseOffset::PC) |= (((drive_strength >> 5) & 0x3) << (2 * ui8Bit));
+                }
+            }
+
+            // Set output drive strength
+            __mem32(BASE + GPIO::BaseOffset::DR2R) = ((drive_strength & 1) ? (__mem32(BASE + GPIO::BaseOffset::DR2R) | PINS) :
+                                                                             (__mem32(BASE + GPIO::BaseOffset::DR2R) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::DR4R) = ((drive_strength & 2) ? (__mem32(BASE + GPIO::BaseOffset::DR4R) | PINS) :
+                                                                             (__mem32(BASE + GPIO::BaseOffset::DR4R) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::DR8R) = ((drive_strength & 4) ? (__mem32(BASE + GPIO::BaseOffset::DR8R) | PINS) :
+                                                                             (__mem32(BASE + GPIO::BaseOffset::DR8R) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::SLR) =
+                ((drive_strength & 8) ? (__mem32(BASE + GPIO::BaseOffset::SLR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::SLR) & ~(PINS)));
+
+            // Set 12-mA drive select register
+            __mem32(BASE + GPIO::BaseOffset::DR12R) = ((drive_strength & 0x10) ? (__mem32(BASE + GPIO::BaseOffset::DR12R) | PINS) :
+                                                                                 (__mem32(BASE + GPIO::BaseOffset::DR12R) & ~(PINS)));
+
+            // Set pin type
+            __mem32(BASE + GPIO::BaseOffset::ODR) =
+                ((pin_type & 1) ? (__mem32(BASE + GPIO::BaseOffset::ODR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::ODR) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::PUR) =
+                ((pin_type & 2) ? (__mem32(BASE + GPIO::BaseOffset::PUR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::PUR) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::PDR) =
+                ((pin_type & 4) ? (__mem32(BASE + GPIO::BaseOffset::PDR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::PDR) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::DEN) =
+                ((pin_type & 8) ? (__mem32(BASE + GPIO::BaseOffset::DEN) | PINS) : (__mem32(BASE + GPIO::BaseOffset::DEN) & ~(PINS)));
+
+            // Set wake pin enable register and wake level register
+            __mem32(BASE + GPIO::BaseOffset::WAKELVL) = ((pin_type & 0x200) ? (__mem32(BASE + GPIO::BaseOffset::WAKELVL) | PINS) :
+                                                                              (__mem32(BASE + GPIO::BaseOffset::WAKELVL) & ~(PINS)));
+            __mem32(BASE + GPIO::BaseOffset::WAKEPEN) = ((pin_type & 0x300) ? (__mem32(BASE + GPIO::BaseOffset::WAKEPEN) | PINS) :
+                                                                              (__mem32(BASE + GPIO::BaseOffset::WAKEPEN) & ~(PINS)));
+
+            // Set analog mode select register
+            __mem32(BASE + GPIO::BaseOffset::AMSEL) =
+                ((pin_type == GPIO::PinType::ANALOG) ? (__mem32(BASE + GPIO::BaseOffset::AMSEL) | PINS) :
+                                                       (__mem32(BASE + GPIO::BaseOffset::AMSEL) & ~(PINS)));
+        }
+
     private:
         /////////////////////////////////////
         // ConfigurePinRouting unroll helpers
@@ -201,48 +246,7 @@ namespace CFXS::HW::TM4C {
         /// @param drive_strength output drive strength
         /// @param pin_type [GPIO::PinType] type of pad (normal, pull-up, pull-down, ...)
         void SetConfig(uint32_t drive_strength, uint32_t pin_type) const {
-            // Set GPIO peripheral configuration register first as required
-            for (uint8_t ui8Bit = 0; ui8Bit < 8; ui8Bit++) {
-                if (PINS & (1 << ui8Bit)) {
-                    __mem32(BASE + GPIO::BaseOffset::PC) = (__mem32(BASE + GPIO::BaseOffset::PC) & ~(0x3 << (2 * ui8Bit)));
-                    __mem32(BASE + GPIO::BaseOffset::PC) |= (((drive_strength >> 5) & 0x3) << (2 * ui8Bit));
-                }
-            }
-
-            // Set output drive strength
-            __mem32(BASE + GPIO::BaseOffset::DR2R) = ((drive_strength & 1) ? (__mem32(BASE + GPIO::BaseOffset::DR2R) | PINS) :
-                                                                             (__mem32(BASE + GPIO::BaseOffset::DR2R) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::DR4R) = ((drive_strength & 2) ? (__mem32(BASE + GPIO::BaseOffset::DR4R) | PINS) :
-                                                                             (__mem32(BASE + GPIO::BaseOffset::DR4R) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::DR8R) = ((drive_strength & 4) ? (__mem32(BASE + GPIO::BaseOffset::DR8R) | PINS) :
-                                                                             (__mem32(BASE + GPIO::BaseOffset::DR8R) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::SLR) =
-                ((drive_strength & 8) ? (__mem32(BASE + GPIO::BaseOffset::SLR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::SLR) & ~(PINS)));
-
-            // Set 12-mA drive select register
-            __mem32(BASE + GPIO::BaseOffset::DR12R) = ((drive_strength & 0x10) ? (__mem32(BASE + GPIO::BaseOffset::DR12R) | PINS) :
-                                                                                 (__mem32(BASE + GPIO::BaseOffset::DR12R) & ~(PINS)));
-
-            // Set pin type
-            __mem32(BASE + GPIO::BaseOffset::ODR) =
-                ((pin_type & 1) ? (__mem32(BASE + GPIO::BaseOffset::ODR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::ODR) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::PUR) =
-                ((pin_type & 2) ? (__mem32(BASE + GPIO::BaseOffset::PUR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::PUR) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::PDR) =
-                ((pin_type & 4) ? (__mem32(BASE + GPIO::BaseOffset::PDR) | PINS) : (__mem32(BASE + GPIO::BaseOffset::PDR) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::DEN) =
-                ((pin_type & 8) ? (__mem32(BASE + GPIO::BaseOffset::DEN) | PINS) : (__mem32(BASE + GPIO::BaseOffset::DEN) & ~(PINS)));
-
-            // Set wake pin enable register and wake level register
-            __mem32(BASE + GPIO::BaseOffset::WAKELVL) = ((pin_type & 0x200) ? (__mem32(BASE + GPIO::BaseOffset::WAKELVL) | PINS) :
-                                                                              (__mem32(BASE + GPIO::BaseOffset::WAKELVL) & ~(PINS)));
-            __mem32(BASE + GPIO::BaseOffset::WAKEPEN) = ((pin_type & 0x300) ? (__mem32(BASE + GPIO::BaseOffset::WAKEPEN) | PINS) :
-                                                                              (__mem32(BASE + GPIO::BaseOffset::WAKEPEN) & ~(PINS)));
-
-            // Set analog mode select register
-            __mem32(BASE + GPIO::BaseOffset::AMSEL) =
-                ((pin_type == GPIO::PinType::ANALOG) ? (__mem32(BASE + GPIO::BaseOffset::AMSEL) | PINS) :
-                                                       (__mem32(BASE + GPIO::BaseOffset::AMSEL) & ~(PINS)));
+            GPIO::__SetConfig(drive_strength, pin_type, BASE, PINS);
         }
 
         /// @brief Configure pins as inputs
@@ -250,6 +254,20 @@ namespace CFXS::HW::TM4C {
             __mem32(BASE + GPIO::BaseOffset::DIR) &= ~PINS;   // in
             __mem32(BASE + GPIO::BaseOffset::AFSEL) &= ~PINS; // i/o
             SetConfig(GPIO::Strength::_2MA, GPIO::PinType::STD);
+        }
+
+        /// @brief Configure pins as inputs with pull up
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsInput_PullUp() const {
+            __mem32(BASE + GPIO::BaseOffset::DIR) &= ~PINS;   // in
+            __mem32(BASE + GPIO::BaseOffset::AFSEL) &= ~PINS; // i/o
+            SetConfig(GPIO::Strength::_2MA, GPIO::PinType::STD_WPU);
+        }
+
+        /// @brief Configure pins as inputs with pull down
+        CFXS_STATIC_GPIO_CONSTEXPR void ConfigureAsInput_PullDown() const {
+            __mem32(BASE + GPIO::BaseOffset::DIR) &= ~PINS;   // in
+            __mem32(BASE + GPIO::BaseOffset::AFSEL) &= ~PINS; // i/o
+            SetConfig(GPIO::Strength::_2MA, GPIO::PinType::STD_WPD);
         }
 
         /// @brief Configure pins as outputs
