@@ -47,10 +47,10 @@ typedef u8_t sys_prot_t;
 #define U16_F "u"
 #define S16_F "d"
 #define X16_F "x"
-#define U32_F "u"
+#define U32_F "lu"
 #define U64_F "ull"
-#define S32_F "d"
-#define X32_F "x"
+#define S32_F "ld"
+#define X32_F "lx"
 
 #if defined(__arm__) && defined(__ARMCC_VERSION)
     //

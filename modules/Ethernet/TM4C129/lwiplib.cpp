@@ -643,9 +643,9 @@ static void lwIPPrivateInit(void *pvArg) {
     // Setup the network address values.
     //
     if (g_ui32IPMode == IPADDR_USE_STATIC) {
-        ip_addr.addr  = htonl(g_ui32IPAddr);
-        net_mask.addr = htonl(g_ui32NetMask);
-        gw_addr.addr  = htonl(g_ui32GWAddr);
+        ip_addr.addr  = g_ui32IPAddr;
+        net_mask.addr = g_ui32NetMask;
+        gw_addr.addr  = g_ui32GWAddr;
     } else {
         ip_addr.addr  = 0;
         net_mask.addr = 0;
@@ -903,9 +903,9 @@ static void lwIPPrivateNetworkConfigChange(void *pvArg) {
     // Setup the network address values.
     //
     if (ui32IPMode == IPADDR_USE_STATIC) {
-        ip_addr.addr  = htonl(g_ui32IPAddr);
-        net_mask.addr = htonl(g_ui32NetMask);
-        gw_addr.addr  = htonl(g_ui32GWAddr);
+        ip_addr.addr  = g_ui32IPAddr;
+        net_mask.addr = g_ui32NetMask;
+        gw_addr.addr  = g_ui32GWAddr;
     }
 #if LWIP_DHCP || LWIP_AUTOIP
     else {

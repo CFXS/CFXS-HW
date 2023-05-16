@@ -73,24 +73,8 @@ if(${CFXS_HW_MODULE_ETHERNET})
   list(APPEND sources ${eth_sources})
   list(APPEND asm_sources ${eth_asm_sources})
 
-  message(" - Adding files:")
-
-  if(NOT "${eth_common_sources}" STREQUAL "")
-    message("       [${eth_common_sources}]")
-  endif()
-
-  if(NOT "${eth_common_asm_sources}" STREQUAL "")
-    message("       [${eth_common_asm_sources}]")
-  endif()
-
   if("${eth_sources}" STREQUAL "")
     message(WARNING "Ethernet platform specific C/C++ sources empty (modules/Ethernet/${CFXS_STARTUP_PLATFORM})")
-  else()
-    message("       [${eth_sources}]")
-  endif()
-
-  if(NOT "${eth_asm_sources}" STREQUAL "")
-    message("       [${eth_asm_sources}]")
   endif()
 
   set(ETH_INCLUDE_DIR_PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/modules/Ethernet")

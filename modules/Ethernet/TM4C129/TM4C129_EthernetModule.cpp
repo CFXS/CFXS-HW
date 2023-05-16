@@ -32,7 +32,8 @@ using CFXS::HW::TM4C::SystemControl;
 
 ////////////////////////////////////////////////////////////
 
-static int s_Eth_ProtectLevel = 1;
+static int s_Eth_ProtectLevel = 0;
+extern bool __cfxs_is_initialization_complete();
 
 __c_func uint32_t sys_now() {
     return CFXS::Time::ms;
@@ -46,7 +47,7 @@ __c_func sys_prot_t sys_arch_protect() {
 }
 __c_func void sys_arch_unprotect(sys_prot_t level) {
     s_Eth_ProtectLevel--;
-    if (s_Eth_ProtectLevel == 0)
+    if (s_Eth_ProtectLevel == 0 && __cfxs_is_initialization_complete())
         CFXS::CPU::EnableInterrupts();
 }
 
@@ -132,17 +133,52 @@ EthernetHeapStatus s_EthernetHeapStats;
 #include <CFXS/Platform/Heap/MemoryManager.hpp>
 extern CFXS::Heap s_MainHeap;
 
+// #define CFXS_HW_ETHERNET_MEMORY_CHECKS
+
+#ifdef CFXS_HW_ETHERNET_MEMORY_CHECKS
+    #include <EASTL/unordered_map.h>
+eastl::unordered_map<void *, bool> s_alloc_map;
+eastl::unordered_map<void *, uint32_t> s_release_map;
+volatile __used uint32_t s_release_location;
+#endif
+
 __c_func void __cfxs_eth_free(void *data) {
+#ifdef CFXS_HW_ETHERNET_MEMORY_CHECKS
+    register uint32_t lr;
+    asm volatile("mov %0, LR\n" : "=r"(lr));
+#endif
+
     s_EthernetHeapStats.free_count++;
+
+#ifdef CFXS_HW_ETHERNET_MEMORY_CHECKS
+    if ((s_alloc_map.find(data) == s_alloc_map.end())) {
+        CFXS_ERROR("free unknown ptr %p\n", data);
+    } else if (s_alloc_map[data] == false) {
+        s_release_location = s_release_map[data];
+        CFXS_ERROR("free released ptr %p (released from %p)\n", data, s_release_location);
+    } else {
+        s_alloc_map[data]   = false;
+        s_release_map[data] = lr;
+    }
+#endif
+
     s_MainHeap.Deallocate(data);
 }
 __c_func void *__cfxs_eth_malloc(size_t size) {
     s_EthernetHeapStats.alloc_count++;
-    return s_MainHeap.Allocate(size);
+    auto p = s_MainHeap.Allocate(size);
+#ifdef CFXS_HW_ETHERNET_MEMORY_CHECKS
+    s_alloc_map[p] = true;
+#endif
+    return p;
 }
 __c_func void *__cfxs_eth_calloc(size_t nitems, size_t size) {
     s_EthernetHeapStats.alloc_count++;
-    return s_MainHeap.AllocateAndZero(nitems * size);
+    auto p = s_MainHeap.AllocateAndZero(nitems * size);
+#ifdef CFXS_HW_ETHERNET_MEMORY_CHECKS
+    s_alloc_map[p] = true;
+#endif
+    return p;
 }
 
 __always_inline void Process_Ethernet_PHY_Interrupt() {
@@ -458,7 +494,7 @@ static err_t ethernet_transmit(struct netif *psNetif, struct pbuf *p) {
     bool bFirst;
     SYS_ARCH_DECL_PROTECT(lev);
 
-    LWIP_DEBUGF(NETIF_DEBUG, ("ethernet_transmit 0x%08x, len %d\n", p, p->tot_len));
+    LWIP_DEBUGF(NETIF_DEBUG, ("ethernet_transmit %p, len %d\n", p, p->tot_len));
 
     /**
    * This entire function must run within a "critical section" to preserve
@@ -627,6 +663,7 @@ err_t __cfxs_ethernet_lwip_network_interface_init(struct netif *interface) {
     interface->output     = etharp_output;
     interface->linkoutput = ethernet_transmit;
     interface->mtu        = 1500;
+    interface->hwaddr_len = ETH_HWADDR_LEN;
     interface->flags |= NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
 
     return ERR_OK;
@@ -746,11 +783,13 @@ void __cfxs_module_Ethernet_Initialize(const CFXS::MAC_Address &default_mac) {
     #error Ethernet mode not defined (CFXS_HW_ETHERNET_INTERRUPT_MODE/CFXS_HW_ETHERNET_POLL_MODE)
 #endif
 
+    memcpy(e_Main_Network_Interface.hwaddr, default_mac.GetRawData(), 6);
+
     lwIPInit(CFXS::CPU::CLOCK_FREQUENCY,
              default_mac.GetRawData(),
-             CFXS::IPv4{2, 0, 0, 1}.ToNetworkOrder(),
-             CFXS::IPv4{255, 0, 0, 0}.ToNetworkOrder(),
-             CFXS::IPv4{255, 255, 255, 255}.ToNetworkOrder(),
+             CFXS::IPv4{"2.0.0.1"}.GetValue(),
+             CFXS::IPv4{"255.0.0.0"}.GetValue(),
+             CFXS::IPv4::BROADCAST().GetValue(),
              0);
 
     CFXS::Task::Create(HIGH_PRIORITY, "lwIP Timer", lwIPTimer, 100)->Start();
@@ -766,6 +805,4 @@ void __cfxs_module_Ethernet_Initialize(const CFXS::MAC_Address &default_mac) {
         },
         100)
         ->Start();
-
-    s_Eth_ProtectLevel--;
 }
