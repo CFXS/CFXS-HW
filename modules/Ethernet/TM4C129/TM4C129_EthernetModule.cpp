@@ -256,7 +256,7 @@ __always_inline void Process_Ethernet_Transmit() {
 
         if (desc_ref.packet_buffer) {
             if (!((uint32_t)(desc_ref.packet_buffer) & 1)) {
-                s_Ethernet_DataRateCounter_RX += desc_ref.packet_buffer->tot_len;
+                s_Ethernet_DataRateCounter_TX += desc_ref.packet_buffer->tot_len;
                 pbuf_free(desc_ref.packet_buffer);
             }
             desc_ref.packet_buffer = nullptr;
@@ -313,7 +313,7 @@ __always_inline void Process_Ethernet_Receive() {
                     pBuf->time_ns = pDescList->pDescriptors[pDescList->ui32Read].dma_descriptor.ui32IEEE1588TimeLo;
 #endif
 
-                    s_Ethernet_DataRateCounter_TX += packet_buffer->tot_len;
+                    s_Ethernet_DataRateCounter_RX += packet_buffer->tot_len;
 #if NO_SYS
                     auto error_reason = ethernet_input(packet_buffer, &e_Main_Network_Interface);
 #else
@@ -798,11 +798,21 @@ void __cfxs_module_Ethernet_Initialize(const CFXS::MAC_Address &default_mac) {
         LOW_PRIORITY,
         "Network Rate",
         [](auto...) {
-            s_Ethernet_DataRate_TX        = s_Ethernet_DataRateCounter_TX;
+            static CFXS::Time_t lastTime = 0;
+            auto diff                    = CFXS::Time::ms - lastTime;
+            if (diff == 0)
+                diff = 1;
+            auto scale = (1000.0f / diff);
+
+            auto cnt_tx                   = s_Ethernet_DataRateCounter_TX;
             s_Ethernet_DataRateCounter_TX = 0;
-            s_Ethernet_DataRate_RX        = s_Ethernet_DataRateCounter_RX;
+            auto cnt_rx                   = s_Ethernet_DataRateCounter_RX;
             s_Ethernet_DataRateCounter_RX = 0;
+            s_Ethernet_DataRate_TX        = cnt_tx * scale;
+            s_Ethernet_DataRate_RX        = cnt_rx * scale;
+
+            lastTime = CFXS::Time::ms;
         },
-        100)
+        1000)
         ->Start();
 }
