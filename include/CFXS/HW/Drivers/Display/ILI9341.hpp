@@ -158,14 +158,28 @@ namespace CFXS::HW {
         constexpr void SetRegion(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
             x += X_PANEL_OFFSET;
             y += Y_PANEL_OFFSET;
-            INTERFACE{}.SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::COLUMN_ADDRESS_SET);
             INTERFACE{}.SendData16(x);
             x += w - 1;
             INTERFACE{}.SendData16(x);
-            INTERFACE{}.SendCommand(_ILI9341_Base::Command::COLUMN_ADDRESS_SET);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
             INTERFACE{}.SendData16(y);
             y += h - 1;
             INTERFACE{}.SendData16(y);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::MEMORY_WRITE);
+        }
+
+        constexpr void SetRegionXYXY(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+            x1 += X_PANEL_OFFSET;
+            y1 += Y_PANEL_OFFSET;
+            x2 += X_PANEL_OFFSET;
+            y2 += Y_PANEL_OFFSET;
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::COLUMN_ADDRESS_SET);
+            INTERFACE{}.SendData16(x1);
+            INTERFACE{}.SendData16(x2);
+            INTERFACE{}.SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
+            INTERFACE{}.SendData16(y1);
+            INTERFACE{}.SendData16(y2);
             INTERFACE{}.SendCommand(_ILI9341_Base::Command::MEMORY_WRITE);
         }
 
@@ -183,7 +197,7 @@ namespace CFXS::HW {
             }
         }
 
-        constexpr void SendPixel16(uint16_t x, uint16_t y, uint16_t color) {
+        constexpr void SetPixel16(uint16_t x, uint16_t y, uint16_t color) {
             x += X_PANEL_OFFSET;
             y += Y_PANEL_OFFSET;
             INTERFACE{}.SendCommand(_ILI9341_Base::Command::PAGE_ADDRESS_SET);
@@ -193,6 +207,10 @@ namespace CFXS::HW {
             INTERFACE{}.SendData16(y);
             INTERFACE{}.SendData16(y);
             INTERFACE{}.SendCommand(_ILI9341_Base::Command::MEMORY_WRITE);
+            INTERFACE{}.SendData16(color);
+        }
+
+        constexpr void SendPixel16(uint16_t color) {
             INTERFACE{}.SendData16(color);
         }
 
@@ -217,11 +235,11 @@ namespace CFXS::HW {
         constexpr void Enable_VSYNC_Output(uint16_t scanline) {
         }
 
-        static uint16_t GetWidth() {
+        static constexpr uint16_t GetWidth() {
             return BASE_WIDTH;
         }
 
-        static uint16_t GetHeight() {
+        static constexpr uint16_t GetHeight() {
             return BASE_HEIGHT;
         }
     };

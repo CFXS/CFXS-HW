@@ -18,7 +18,6 @@
 // [CFXS] //
 #pragma once
 
-#include <array>
 #include <inc/hw_memmap.h>
 #include <inc/hw_gpio.h>
 #include <driverlib/gpio.h>

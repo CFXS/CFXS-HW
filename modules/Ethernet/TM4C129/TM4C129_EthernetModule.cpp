@@ -26,6 +26,8 @@ uint32_t s_Ethernet_DataRateCounter_TX = 0;
 uint32_t s_Ethernet_DataRateCounter_RX = 0;
 uint32_t s_Ethernet_DataRate_TX        = 0;
 uint32_t s_Ethernet_DataRate_RX        = 0;
+uint64_t s_Ethernet_PacketCount_TX     = 0;
+uint64_t s_Ethernet_PacketCount_RX     = 0;
 
 using CFXS::DebugLevel;
 using CFXS::HW::TM4C::SystemControl;
@@ -136,7 +138,6 @@ extern CFXS::Heap s_MainHeap;
 // #define CFXS_HW_ETHERNET_MEMORY_CHECKS
 
 #ifdef CFXS_HW_ETHERNET_MEMORY_CHECKS
-    #include <EASTL/unordered_map.h>
 eastl::unordered_map<void *, bool> s_alloc_map;
 eastl::unordered_map<void *, uint32_t> s_release_map;
 volatile __used uint32_t s_release_location;
@@ -257,6 +258,7 @@ __always_inline void Process_Ethernet_Transmit() {
         if (desc_ref.packet_buffer) {
             if (!((uint32_t)(desc_ref.packet_buffer) & 1)) {
                 s_Ethernet_DataRateCounter_TX += desc_ref.packet_buffer->tot_len;
+                s_Ethernet_PacketCount_TX++;
                 pbuf_free(desc_ref.packet_buffer);
             }
             desc_ref.packet_buffer = nullptr;
@@ -314,6 +316,7 @@ __always_inline void Process_Ethernet_Receive() {
 #endif
 
                     s_Ethernet_DataRateCounter_RX += packet_buffer->tot_len;
+                    s_Ethernet_PacketCount_RX++;
 #if NO_SYS
                     auto error_reason = ethernet_input(packet_buffer, &e_Main_Network_Interface);
 #else
