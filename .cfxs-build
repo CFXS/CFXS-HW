@@ -1,0 +1,9 @@
+printf("Load CFXS-HW")
+cfxs_hw = create_library("CFXS HW")
+cfxs_hw:add_include_paths("public", {"./include"})
+cfxs_hw:add_include_paths("private", {"./src"})
+cfxs_hw:add_sources({
+    "./src/**.c",
+    "./src/**.cpp",
+    "./src/**.S"
+})
